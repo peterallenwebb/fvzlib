@@ -14,12 +14,51 @@ independently checkable.
 
 ## Status
 
-Objectives are set as a starting point. The primary toolchain, the handling
-of goto, the first target, the termination approach, the C standard editions,
-the specification architecture, the handling of the undefined behavior gap,
-and the patch sequence are decided, and the first milestone is defined. No proof work has started. See
-[Decisions](#decisions), [Milestones](#milestones), and
+Objectives are set as a starting point, and the high-level decisions are
+made. See [Decisions](#decisions), [Milestones](#milestones), and
 [Open decisions](#open-decisions).
+
+Work on Milestone 1 has started. The format specification and the API
+behavior model for Adler-32 exist, with their traceability file. No C proof
+work has started. One finding about zlib 1.4 is recorded in the ledger and
+resolved by the first patch in the patch sequence.
+
+## What is in the repository
+
+| Path | Contents |
+|---|---|
+| `spec/format/` | Layer 1. Format specifications. Standard library only. |
+| `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
+| `audit/` | Lists of results that must depend on no axioms |
+| `trace/` | Traceability from source sentences to definitions and theorems |
+| `ledger/` | Findings about zlib, one file each |
+| `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
+| `patches/` | The patch sequence: one file per patch, and the `sequence` file that orders them |
+| `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
+| `references/` | Source documents, unmodified |
+| `tools/` | Checks run by the build |
+| `build/` | Generated. Holds the pristine and patched trees. Not committed. |
+
+In `spec/`, a file named after a topic holds definitions only and is trusted
+reading. Its `Facts` and `Tests` companions hold evidence and need not be
+read to know what is claimed.
+
+This layout is provisional until the last open decision is settled.
+
+To build and check, with the pinned toolchain active and a C compiler
+available:
+
+```
+git submodule update --init
+make check
+```
+
+That compiles the Rocq sources, which runs the test vectors. It then checks
+the layer dependency rules, the assumption audit, and traceability against
+RFC 1950 and the pinned `zlib.h`. Last, it applies the patch sequence to a
+copy of upstream and runs each witness against both trees.
+
+The patch sequence currently holds one patch.
 
 ## Guiding principles
 
@@ -257,7 +296,8 @@ Decided 2026-11-23.
 The primary proofs are written in the Verified Software Toolchain (VST), in
 the Rocq prover, against CompCert's Clight semantics. We use the stable VST
 2.x line. The 3.x line, built on Iris, is still in beta and will be revisited
-when it is released. Exact versions are pinned when the build is set up.
+when it is released. Exact versions are given under "Toolchain versions"
+below.
 
 Why:
 
@@ -289,6 +329,44 @@ upstream source:
   the LGPL, so the proofs can be reproduced freely. Most dependents will build
   with other compilers, so the ISO C argument below is the main route by which
   the proofs deliver value to them.
+
+### Toolchain versions
+
+Decided 2026-11-24.
+
+| Tool | Version |
+|---|---|
+| Rocq | 9.2.0 |
+| CompCert | 3.18 |
+| VST | 2.17 |
+| OCaml | 4.14.3 |
+
+All are installed from opam, using the default repository and the
+`coq-released` repository. The same versions are used on every machine.
+
+Why these:
+
+- This is the newest set that works together. Rocq 9.3.0 exists, but the
+  CompCert 3.18 package does not accept it yet.
+- CompCert 3.18 changed its formal semantics. Loads and stores carry an
+  explicit check on address offsets, the memory model handles alignment per
+  target, and the semantics of `free` is stricter. VST 2.17 adapts to this.
+  Proofs written against an older release would rest on an older definition
+  of the language.
+- CompCert 3.17 and 3.18 fixed front-end bugs, including one in how switch
+  statements are elaborated, and 3.18 fixed a jump table instruction on
+  x86-64.
+
+Known quirk: the CompCert 3.18 release reports itself as version 3.17. Its
+`VERSION` file was not updated upstream. The installed sources do contain the
+3.18 semantic changes. We therefore identify CompCert by its opam package
+version and source hash, never by the output of `ccomp -version`.
+
+Checked on an ARM Mac with these versions: a small C function was translated,
+a VST contract for it was proven, and the assumption list was the standard
+classical set. All fifteen library source files of zlib 1.4 were translated
+by the CompCert front end, with the ARM CRC path disabled. Both checks must
+be repeated on the x86-64 Linux target.
 
 ### Policy on undefined, implementation-defined, and unspecified behavior
 
@@ -404,8 +482,8 @@ Why:
   are the baseline every other distribution modifies.
 - x86-64 Linux is the most widely deployed platform for upstream zlib, and no
   code path on it uses assembly.
-- CompCert's front end, at version 3.16, translated all fifteen library
-  source files of 1.4 in this configuration. The check was run on an ARM Mac
+- CompCert's front end, at versions 3.16 and 3.18, translated all fifteen
+  library source files of 1.4 in this configuration. The check was run on an ARM Mac
   with the ARM CRC path disabled, so it must be repeated on the real target.
 
 Consequences:
@@ -751,9 +829,9 @@ depends on the method working.
 
 Exit criteria:
 
-1. **Reproducible environment.** Pinned versions of Rocq, VST, and CompCert on
-   the x86-64 Linux machine, with zlib 1.4 pinned by hash, rebuilt by one
-   command.
+1. **Reproducible environment.** The pinned versions of Rocq, VST, and
+   CompCert on the x86-64 Linux machine, with zlib 1.4 pinned by hash, rebuilt
+   by one command.
 2. **Proven equals built.** A mechanical check that the source given to the
    verifier matches what the upstream build compiles, for this file.
 3. **Reference model.** Adler-32 as defined in RFC 1950, validated against
@@ -783,6 +861,27 @@ Work that does not depend on the target platform can begin before the move to
 the Linux machine: the reference model, the contract design, the
 instrumentation function, and the toy goto experiment. The environment, the
 build check, and the final proofs wait for that machine.
+
+Progress as of 2026-11-24:
+
+- **Criterion 3, partly done.** Layer 1 defines Adler-32 twice, from the
+  prose of RFC 1950 and from its sample code, and proves the two equal.
+  Test vectors pass. They were compared with the system zlib on the
+  development machine, not yet with the pinned release.
+- **Layer 2 written.** Specifications for `adler32`, `adler32_z`, and
+  `adler32_combine`, with proofs that each can be met, that each fixes the
+  result where the manual makes a promise, and that the manual's usage
+  example computes the checksum of all the data however it is split.
+- **Criterion 8, partly done.** All 31 sentences of the relevant passages in
+  RFC 1950 and `zlib.h` are in the traceability file. Mutation testing has
+  not started.
+- **Criterion 9, started.** The ledger has its first entry,
+  [F0001](ledger/F0001-adler32-null-buffer-length-one.md). `adler32` with a
+  null buffer and a length of 1 dereferenced the null pointer, against the
+  manual. It is resolved by a hardening patch with a witness test. As a
+  result `adler32_z` will be listed as proven after a patch, not as is.
+- **Not started:** the environment on the Linux machine, the build check,
+  contracts, proofs, the transformation theorems, and contract transfer.
 
 ### Milestone 2: the inflate reference model
 
@@ -827,7 +926,8 @@ F*.
 
 Listed roughly in order of consequence.
 
-1. **Repository layout, version pins, and CI.**
+1. **Repository layout and CI.** A provisional layout is in use, described
+   under [What is in the repository](#what-is-in-the-repository).
 
 ## Planned spikes
 

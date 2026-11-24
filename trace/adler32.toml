@@ -1,0 +1,351 @@
+# Traceability for Adler-32.
+#
+# Every sentence of the source passages below has an entry.  The entries of a
+# passage, joined in order, must reproduce the passage exactly, apart from
+# line breaks and spacing.  tools/check_trace.py enforces this, so a sentence
+# cannot be left out silently.
+#
+# status is one of:
+#   definition   formalized by the named definitions
+#   theorem      follows from the named theorems
+#   test         illustrated by the named tests only
+#   pending      to be covered by a later layer or milestone, as the note says
+#   not-covered  deliberately not covered, for the reason in the note
+#
+# sha256 is the hash of the sentence text.  Passage text is compared after
+# collapsing all runs of white space to one space.
+#
+# before and after are the source text immediately around the passage.  They
+# pin its boundaries, so the passage cannot be shortened silently either.  An
+# empty after means the passage ends the document.
+
+schema = 1
+
+[sources.rfc1950]
+title = "RFC 1950, ZLIB Compressed Data Format Specification version 3.3"
+path = "references/rfc1950.txt"
+sha256 = "8f0475a5c984657bf26277f73df9456c9b97f175084f0c1748f1eb1f0b9b10b9"
+# Page footers and running headers, removed before comparison.
+strip = [
+  "^Deutsch & Gailly\\s+Informational\\s+\\[Page \\d+\\]\\s*$",
+  "^\\f?RFC 1950\\s+ZLIB Compressed Data Format Specification\\s+May 1996\\s*$",
+]
+
+[sources.zlib_h]
+title = "zlib manual, zlib.h"
+upstream_path = "zlib.h"
+release = "1.4"
+commit = "99623ef7097352da7993ba614161fd6a311e046e"
+sha256 = "2c404dcaa08709c2a129aea18f3dad4fb5acc5cb52ef12b6223bf8e78c195801"
+strip = []
+
+[[passage]]
+id = "rfc1950-2.2-adler32"
+source = "rfc1950"
+where = "Section 2.2, the ADLER32 field"
+before = "ADLER32 (Adler-32 checksum)"
+after = "2.3. Compliance"
+
+  [[passage.sentence]]
+  text = "This contains a checksum value of the uncompressed data (excluding any dictionary data) computed according to Adler-32 algorithm."
+  sha256 = "c5265110b78d999a10dfc5cd8591ce2540a3d270024f85e786c45f4f274e20ae"
+  status = "pending"
+  note = "Belongs to the zlib stream format, which is specified in a later milestone."
+
+  [[passage.sentence]]
+  text = "This algorithm is a 32-bit extension and improvement of the Fletcher algorithm, used in the ITU-T X.224 / ISO 8073 standard."
+  sha256 = "f59834c21c11d2843945cf6e9d83d684813c36f630184a8fcbc7cdf6610b7d8d"
+  status = "not-covered"
+  note = "Historical background. It makes no checkable statement about Adler-32."
+
+  [[passage.sentence]]
+  text = "See references [4] and [5] in Chapter 3, below)"
+  sha256 = "0b72ff1d9fcd89203c1fb315f190b9374d5ea2707949b0cbc863f58ee140d2ad"
+  status = "not-covered"
+  note = "Cross-reference."
+
+  [[passage.sentence]]
+  text = "Adler-32 is composed of two sums accumulated per byte: s1 is the sum of all bytes, s2 is the sum of all s1 values."
+  sha256 = "96ef774f71b92cf7262b256f6acc2e41c1d23e0efa0dc728197777bdaf074b6c"
+  status = "definition"
+  covered_by = [
+    "fvzlib.format.Adler32.s1",
+    "fvzlib.format.Adler32.s2",
+    "fvzlib.format.Adler32.sum",
+    "fvzlib.format.Adler32.prefixes",
+    "fvzlib.format.Adler32Facts.prefixes_firstn",
+  ]
+  note = "One s1 value per byte consumed, so one per non-empty prefix. prefixes_firstn confirms that reading of the helper."
+
+  [[passage.sentence]]
+  text = "Both sums are done modulo 65521."
+  sha256 = "edce61ad8596dc4dc65fe3a716c944337306bd5ae76d92a26ff9ac6c7f83bedd"
+  status = "definition"
+  covered_by = [
+    "fvzlib.format.Adler32.base",
+    "fvzlib.format.Adler32.s1",
+    "fvzlib.format.Adler32.s2",
+    "fvzlib.format.Adler32Facts.s2_unreduced",
+  ]
+  note = "The prose does not say whether s1 values are reduced before being added into s2. s2_unreduced proves both readings give the same result."
+
+  [[passage.sentence]]
+  text = "s1 is initialized to 1, s2 to zero."
+  sha256 = "71138281a72dd1676be880c660c663084f9403557d15045c0d6822edcea681f8"
+  status = "definition"
+  covered_by = [
+    "fvzlib.format.Adler32.s1",
+    "fvzlib.format.Adler32.s2",
+    "fvzlib.format.Adler32Facts.adler32_nil",
+  ]
+
+  [[passage.sentence]]
+  text = "The Adler-32 checksum is stored as s2*65536 + s1 in most- significant-byte first (network) order."
+  sha256 = "bda7fce4210aa6948218072dee10bac8f522b4032bdcd9eed46dc473feb3963e"
+  status = "definition"
+  covered_by = [
+    "fvzlib.format.Adler32.adler32",
+    "fvzlib.format.Adler32Facts.adler32_range",
+  ]
+  note = "Covers the value only. The byte order in which it is stored in a zlib stream belongs to the zlib stream format, a later milestone."
+
+[[passage]]
+id = "rfc1950-8.2-rationale"
+source = "rfc1950"
+where = "Section 8.2, The Adler-32 algorithm"
+before = "8.2. The Adler-32 algorithm"
+after = "9. Appendix: Sample code"
+
+  [[passage.sentence]]
+  text = "The Adler-32 algorithm is much faster than the CRC32 algorithm yet still provides an extremely low probability of undetected errors."
+  sha256 = "f6c24e1d8970f892b56370e31a17011bfa118f9a2441e5dbdf9738a0d8aa9e07"
+  status = "not-covered"
+  note = "Rationale. No claim of ours depends on speed or on error-detection strength."
+
+  [[passage.sentence]]
+  text = "The modulo on unsigned long accumulators can be delayed for 5552 bytes, so the modulo operation time is negligible."
+  sha256 = "fa40a8efc02d9ae04f8329811c0d555db6513f838cd6c029ac2d6c211a3d4afb"
+  status = "pending"
+  note = "A fact about implementations. To be established in Layer 4 when the delayed-modulo loop of adler32_z is proven."
+
+  [[passage.sentence]]
+  text = "If the bytes are a, b, c, the second sum is 3a + 2b + c + 3, and so is position and order sensitive, unlike the first sum, which is just a checksum."
+  sha256 = "fb2f3b4c72d3a2e461845a2b6715ac9ee1f71c95484db5eae776ec7bb21b6a99"
+  status = "theorem"
+  covered_by = [
+    "fvzlib.format.Adler32Facts.second_sum_abc",
+    "fvzlib.format.Adler32Tests.prose_second_sum",
+  ]
+
+  [[passage.sentence]]
+  text = "That 65521 is prime is important to avoid a possible large class of two-byte errors that leave the check unchanged."
+  sha256 = "3bc951364aee540d12790db011aaef87e3a43763b085ba6af50779d95bddb17a"
+  status = "not-covered"
+  note = "Rationale about error-detection strength. Primality of 65521 is not proven and no claim of ours depends on it."
+
+  [[passage.sentence]]
+  text = "(The Fletcher checksum uses 255, which is not prime and which also makes the Fletcher check insensitive to single byte changes 0 <-> 255.)"
+  sha256 = "febb0fcefd878a4eba479f90400a47c2acabdcc80b7c4470e9eb18badd1b34b7"
+  status = "not-covered"
+  note = "About a different checksum."
+
+  [[passage.sentence]]
+  text = "The sum s1 is initialized to 1 instead of zero to make the length of the sequence part of s2, so that the length does not have to be checked separately."
+  sha256 = "14251e47595ff4ecf4ffcce1f64aa95c5e84a4c71b3fc588ccb929b5e092a5ec"
+  status = "test"
+  covered_by = [
+    "fvzlib.format.Adler32Tests.code_zeros_1000",
+  ]
+  note = "Illustrated by a test: the checksum of a run of zero bytes depends on its length."
+
+  [[passage.sentence]]
+  text = "(Any sequence of zeroes has a Fletcher checksum of zero.)"
+  sha256 = "d5abf0b8781a83d7a23a26630501db550614fc817633702f733342f6285e8f1f"
+  status = "not-covered"
+  note = "About a different checksum."
+
+[[passage]]
+id = "rfc1950-9-sample-code"
+source = "rfc1950"
+where = "Section 9, Appendix: Sample code"
+before = "% modulo operator: a % b is the remainder of a divided by b."
+after = ""
+
+  [[passage.sentence]]
+  text = "#define BASE 65521 /* largest prime smaller than 65536 */"
+  sha256 = "f6c4b5371873ab38131d6a800e17e1eff0c284f617195f13b8c6b46fa4fa0276"
+  status = "definition"
+  covered_by = [
+    "fvzlib.format.Adler32.base",
+  ]
+  note = "The value is covered. That it is the largest prime below 65536 is not proven and no claim of ours depends on it."
+
+  [[passage.sentence]]
+  text = "/* Update a running Adler-32 checksum with the bytes buf[0..len-1] and return the updated checksum. The Adler-32 checksum should be initialized to 1. Usage example: unsigned long adler = 1L; while (read_buffer(buffer, length) != EOF) { adler = update_adler32(adler, buffer, length); } if (adler != original_adler) error(); */"
+  sha256 = "49b3b05e3944b296426032e6b11ff2a148210887bfa76fa0cad81f861ea3b916"
+  status = "theorem"
+  covered_by = [
+    "fvzlib.format.Adler32Facts.update_adler32",
+    "fvzlib.format.Adler32Facts.update_app",
+    "fvzlib.format.Adler32Facts.update_1",
+    "fvzlib.format.Adler32Tests.code_two_pieces",
+  ]
+
+  [[passage.sentence]]
+  text = "unsigned long update_adler32(unsigned long adler, unsigned char *buf, int len) { unsigned long s1 = adler & 0xffff; unsigned long s2 = (adler >> 16) & 0xffff; int n; for (n = 0; n < len; n++) { s1 = (s1 + buf[n]) % BASE; s2 = (s2 + s1) % BASE; } return (s2 << 16) + s1; }"
+  sha256 = "b15b13ca4c223ebc5111fbff1faa9131b909d784d8455c30debb8d5d2c921a82"
+  status = "definition"
+  covered_by = [
+    "fvzlib.format.Adler32.update",
+    "fvzlib.format.Adler32.step",
+    "fvzlib.format.Adler32.low16",
+    "fvzlib.format.Adler32.high16",
+  ]
+
+  [[passage.sentence]]
+  text = "/* Return the adler32 of the bytes buf[0..len-1] */ unsigned long adler32(unsigned char *buf, int len) { return update_adler32(1L, buf, len); }"
+  sha256 = "884fd82dd8c4d2da003bacf4781c0a4b2777fda6cd2428562a90abc1da7be47a"
+  status = "theorem"
+  covered_by = [
+    "fvzlib.format.Adler32Facts.update_1",
+  ]
+  note = "This is the statement that the sample-code reading and the prose reading of the RFC agree."
+
+[[passage]]
+id = "zlib.h-checksum-intro"
+source = "zlib_h"
+where = "Heading comment of the checksum functions"
+before = "/* checksum functions */ /*"
+after = "*/ ZEXTERN uLong ZEXPORT adler32(uLong adler, const Bytef *buf, uInt len);"
+
+  [[passage.sentence]]
+  text = "These functions are not related to compression but are exported anyway because they might be useful in applications using the compression library."
+  sha256 = "35809cff4e74dacdecfaa0c8390d77165b3a8289d15a48c494e5edf277d9b618"
+  status = "not-covered"
+  note = "Introductory remark."
+
+[[passage]]
+id = "zlib.h-adler32"
+source = "zlib_h"
+where = "adler32"
+before = "ZEXTERN uLong ZEXPORT adler32(uLong adler, const Bytef *buf, uInt len); /*"
+after = "*/"
+
+  [[passage.sentence]]
+  text = "Update a running Adler-32 checksum with the bytes buf[0..len-1] and return the updated checksum."
+  sha256 = "61157115b9f5a4daa3ec9223013afd264b2481b531ddb957834184513a66c859"
+  status = "definition"
+  covered_by = [
+    "fvzlib.api.Adler32.adler32_spec",
+    "fvzlib.api.Adler32.running_checksum",
+    "fvzlib.api.Adler32Facts.adler32_reference_meets_spec",
+    "fvzlib.api.Adler32Facts.adler32_spec_deterministic",
+    "fvzlib.api.Adler32Facts.adler32_spec_no_bytes",
+  ]
+  note = "How len relates to the buffer in memory is a Layer 3 matter."
+
+  [[passage.sentence]]
+  text = "An Adler-32 value is in the range of a 32-bit unsigned integer."
+  sha256 = "09d83f2c136c466d29ceec02a020d2aea10b64e13141db636d511fe3c6dbefbb"
+  status = "theorem"
+  covered_by = [
+    "fvzlib.format.Adler32Facts.adler32_range",
+    "fvzlib.api.Adler32Facts.adler32_spec_range",
+    "fvzlib.api.Adler32Facts.running_checksum_range",
+  ]
+
+  [[passage.sentence]]
+  text = "If buf is Z_NULL, this function returns the required initial value for the checksum."
+  sha256 = "f6c4145538d4f5283f653947c11cacae7ea91e8778d8e73f2c7dcc5a9e610f1b"
+  status = "definition"
+  covered_by = [
+    "fvzlib.api.Adler32.adler32_spec",
+    "fvzlib.api.Adler32Facts.adler32_initial_value",
+  ]
+  note = "zlib 1.4 does not keep this promise when len is 1. See ledger/F0001-adler32-null-buffer-length-one.md."
+
+  [[passage.sentence]]
+  text = "An Adler-32 checksum is almost as reliable as a CRC-32 but can be computed much faster."
+  sha256 = "1d1d8f34d9da04e4ef4c443a0ef67e4bf0aa1616c97562708d94834def3d9b18"
+  status = "not-covered"
+  note = "Informative comparison. No claim of ours depends on it."
+
+  [[passage.sentence]]
+  text = "Usage example: uLong adler = adler32(0L, Z_NULL, 0); while (read_buffer(buffer, length) != EOF) { adler = adler32(adler, buffer, length); } if (adler != original_adler) error();"
+  sha256 = "89c1ac7f40f3ce6072bf3b93203500b4aae4b3dcd11c7fa5b982b2eccccfb37f"
+  status = "theorem"
+  covered_by = [
+    "fvzlib.api.Adler32Facts.usage_example",
+    "fvzlib.api.Adler32Facts.fed_in_order",
+  ]
+
+[[passage]]
+id = "zlib.h-adler32_z"
+source = "zlib_h"
+where = "adler32_z"
+before = "ZEXTERN uLong ZEXPORT adler32_z(uLong adler, const Bytef *buf, z_size_t len); /*"
+after = "*/"
+
+  [[passage.sentence]]
+  text = "Same as adler32(), but with a size_t length."
+  sha256 = "65583705b64d36aeb10ed69b950a851f52a904ef572315b659d96054414467c1"
+  status = "definition"
+  covered_by = [
+    "fvzlib.api.Adler32.adler32_spec",
+  ]
+  note = "The same Layer 2 specification serves both functions. The type of the length is a Layer 3 matter."
+
+  [[passage.sentence]]
+  text = "Note that a long is 32 bits on Windows."
+  sha256 = "a1e4020933fc1649d8d94b90482e68a70fc7c2390e6a45940528b8f18f76c70a"
+  status = "not-covered"
+  note = "Concerns the 64-bit Windows data model, which is outside the first target."
+
+[[passage]]
+id = "zlib.h-adler32_combine"
+source = "zlib_h"
+where = "adler32_combine"
+before = "ZEXTERN uLong ZEXPORT adler32_combine(uLong adler1, uLong adler2, z_off_t len2);"
+after = "*/"
+
+  [[passage.sentence]]
+  text = "Combine two Adler-32 checksums into one."
+  sha256 = "a782c53a99ba660ff81c2aeb126f61314935ed6bbe20c2ae98ea27eb2bb466a2"
+  status = "definition"
+  covered_by = [
+    "fvzlib.api.Adler32.adler32_combine_spec",
+  ]
+
+  [[passage.sentence]]
+  text = "For two sequences of bytes, seq1 and seq2 with lengths len1 and len2, Adler-32 checksums were calculated for each, adler1 and adler2."
+  sha256 = "044b2edf203ff80facd51afca65a615858d23a64068b3babf03113599193bb4d"
+  status = "definition"
+  covered_by = [
+    "fvzlib.api.Adler32.adler32_combine_spec",
+    "fvzlib.api.Adler32.running_checksum",
+  ]
+
+  [[passage.sentence]]
+  text = "adler32_combine() returns the Adler-32 checksum of seq1 and seq2 concatenated, requiring only adler1, adler2, and len2."
+  sha256 = "bddcbb448092a19826db954f02a33d57b176815153ad940a927fae08cd5b7372"
+  status = "definition"
+  covered_by = [
+    "fvzlib.api.Adler32.adler32_combine_spec",
+    "fvzlib.api.Adler32Facts.combine_reference_meets_spec",
+    "fvzlib.api.Adler32Facts.adler32_combine_spec_deterministic",
+  ]
+  note = "combine_reference_meets_spec shows that adler1, adler2, and len2 really are enough to determine the result."
+
+  [[passage.sentence]]
+  text = "Note that the z_off_t type (like off_t) is a signed integer."
+  sha256 = "57bd6c37af82a0e7d50623b44358ca7de9625a495d6c3f7643354b46e1196b17"
+  status = "pending"
+  note = "The C type of len2 is a Layer 3 matter."
+
+  [[passage.sentence]]
+  text = "If len2 is negative, the result has no meaning or utility."
+  sha256 = "c6337e33df01e849f72878ef6d46d997dc5990b75b009837b98a7bf1b8d3d494"
+  status = "theorem"
+  covered_by = [
+    "fvzlib.api.Adler32Facts.adler32_combine_spec_negative",
+  ]

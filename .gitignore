@@ -1,0 +1,14 @@
+# Rocq build products
+*.vo
+*.vok
+*.vos
+*.glob
+*.aux
+.lia.cache
+.nia.cache
+Makefile.rocq
+Makefile.rocq.conf
+.Makefile.rocq.d
+
+# Generated trees and test programs
+build/

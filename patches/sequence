@@ -1,0 +1,8 @@
+# The patch sequence.
+#
+# One patch per line, applied in this order to the pinned upstream tree.
+# Lines starting with # and blank lines are ignored.
+#
+# An empty sequence would mean zlib is used verbatim.
+
+0001-adler32-null-buffer-before-one-byte-path.patch

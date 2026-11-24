@@ -1,0 +1,9 @@
+-Q spec/format fvzlib.format
+-Q spec/api fvzlib.api
+
+spec/format/Bytes.v
+spec/format/Adler32.v
+spec/format/Adler32Facts.v
+spec/format/Adler32Tests.v
+spec/api/Adler32.v
+spec/api/Adler32Facts.v

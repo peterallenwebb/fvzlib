@@ -1,0 +1,56 @@
+Patch: 0001-adler32-null-buffer-before-one-byte-path
+Subject: adler32: test for a null buffer before the one-byte fast path
+Class: hardening
+Ledger: F0001
+C-editions-affected: all
+Applies-to: zlib 1.4, commit 99623ef7097352da7993ba614161fd6a311e046e
+Witness: tests/witness/F0001_adler32_null_buffer_length_one.c
+Upstream-status: not submitted
+
+The manual says of adler32(): "If buf is Z_NULL, this function returns the
+required initial value for the checksum."  It places no condition on len.
+
+adler32_z() handled a length of 1 before it tested for a null buffer, so a
+call with buf == Z_NULL and len == 1 read buf[0] and dereferenced the null
+pointer.  This patch moves the null test in front of the one-byte path, so
+the function returns the initial value for a null buffer whatever the
+length, as the manual says.
+
+Behavior is unchanged for every call that was defined before:
+
+  - With a non-null buffer, the null test fails and the same statements run
+    in the same order as before.
+  - With a null buffer and len != 1, the function returned 1 before and
+    returns 1 now.
+
+The only call whose behavior changes is buf == Z_NULL with len == 1, which
+was undefined and now returns 1.
+
+Cost: the one-byte path executes one more comparison.  Every other path
+executes the same comparisons as before.
+
+diff --git a/adler32.c b/adler32.c
+--- a/adler32.c
++++ b/adler32.c
+@@ -66,6 +66,10 @@
+     sum2 = (adler >> 16) & 0xffff;
+     adler &= 0xffff;
+ 
++    /* initial Adler-32 value */
++    if (buf == Z_NULL)
++        return 1L;
++
+     /* in case user likes doing a byte at a time, keep it fast */
+     if (len == 1) {
+         adler += buf[0];
+@@ -77,10 +81,6 @@
+         return adler | (sum2 << 16);
+     }
+ 
+-    /* initial Adler-32 value (deferred check for len == 1 speed) */
+-    if (buf == Z_NULL)
+-        return 1L;
+-
+     /* in case short lengths are provided, keep it somewhat fast */
+     if (len < 16) {
+         while (len--) {
