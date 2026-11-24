@@ -37,6 +37,8 @@ resolved by the first patch in the patch sequence.
 | `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
 | `references/` | Source documents, unmodified |
 | `tools/` | Checks run by the build |
+| `docs/design/` | Design notes and draft contracts that are not yet built |
+| `spikes/` | Exploratory experiments, each with its own README. Not part of the main build. |
 | `build/` | Generated. Holds the pristine and patched trees. Not committed. |
 
 In `spec/`, a file named after a topic holds definitions only and is trusted
@@ -441,11 +443,64 @@ Planned treatment:
 - **Backward jumps in the fast loop.** These need separate treatment, since
   copying the target does not work for a jump backward. Not yet designed.
 
-Known risk: VST proves a contract for the transformed function, and we want
-that contract for the original. Carrying it across may require working inside
-VST's soundness proof. A whole-program statement would be weaker, because it
-loses the per-function contract that downstream projects would import. A
-spike on a toy function must settle this before we rely on the approach.
+Result of the contract transfer spike, run 2026-11-24 and described in
+[spikes/transfer/README.md](spikes/transfer/README.md):
+
+- **A contract cannot be carried back as a VST contract.** VST itself proves
+  that a goto can only be verified from a contradictory precondition. A
+  function with a reachable goto therefore has no VST contract at all.
+- **A statement about executions can be carried back.** VST's soundness
+  theorem turns a verified program into the statement that it never gets
+  stuck, in terms of CompCert's semantics. A behavior-preservation theorem
+  for the transformation carries that statement to the original program.
+- **Downstream verifiers still get contracts.** They import the contracts of
+  the transformed functions and apply the behavior-preservation theorem to
+  their final whole-program result.
+- **The proof-side workflow works.** A toy function with a forward goto was
+  transformed, and a VST contract for the result was proven.
+- **Only three files are affected.** The twelve library files without goto,
+  including `adler32.c`, have their functional contracts proven directly on
+  the real code.
+
+**Decided 2026-11-24, provisionally:** for the three files with goto, our
+claims take the form of statements about executions. Upstream source stays
+verbatim. The alternative, source patches that remove the gotos, is set
+aside. The decision may be revisited once the form of these statements is
+better understood.
+
+What a statement about executions is, in plain terms:
+
+- A VST contract is a claim attached to the text of one function. It says
+  that if the function is called with its precondition met, it behaves
+  safely and returns with its postcondition met. Other proofs can build on
+  it, function by function.
+- A statement about executions is a claim about a whole program running. It
+  says that the program, started from its initial state, never reaches a
+  state where the C semantics has no next step. Out-of-bounds accesses,
+  null dereferences, and the other undefined behaviors are all states of
+  that kind, so "never gets stuck" rules them out.
+- VST's soundness theorem converts the first kind into the second. Once
+  every function of a program has a proven contract, the theorem concludes
+  that the whole program never gets stuck.
+
+How the pieces fit for a file with goto:
+
+1. We transform the function, removing its gotos, and prove VST contracts
+   for the transformed version.
+2. Anyone using the library proves their own code against those contracts.
+   VST's soundness theorem then says their program, linked with the
+   transformed library, never gets stuck.
+3. Our behavior-preservation theorem says the transformed program and the
+   original take corresponding steps. So the original program, the one with
+   the gotos, never gets stuck either.
+
+The guarantee reaches the real code, but only at step 3 and only for a whole
+program. There is never a contract attached to the text of the original
+function. For the twelve files without goto none of this is needed, and
+contracts attach to the real code directly.
+
+The behavior-preservation theorem for the goto transformation is not yet
+proven.
 
 ### First target
 
@@ -804,6 +859,42 @@ of the source checked into this repository, which hides every deviation and
 makes each release a manual merge. The patch sequence can be turned into a
 branch of commits mechanically when we decide to submit upstream.
 
+### Layer 3 contracts
+
+Decided 2026-11-24, for the Adler-32 functions, as the pattern for later
+ones. The draft contracts are in
+[docs/design/layer3-adler32.md](docs/design/layer3-adler32.md).
+
+- **The manual-level contract is the primary one.** The postcondition says
+  the result satisfies the Layer 2 specification. Arguments are not
+  constrained in value. A stronger contract giving the exact result for
+  every input would need a precondition on the checksum argument.
+- **Cost is an upper bound, not an exact count.** An exact count would tie
+  callers to one release's loop structure.
+- **A non-null buffer is a run of bytes inside a non-empty array the caller
+  owns.** This makes the pointer valid even for a length of 0, which the code
+  needs because it compares the pointer with null. A simpler corollary
+  contract covers a plain non-empty buffer.
+- **Each contract has two forms from one definition.** With ticks, which is
+  what VST proves about the instrumented code. Without ticks, which is what a
+  downstream verifier imports for the real code.
+- **Memory is untouched.** Buffers come back as given, under the same share.
+
+Why the buffer is described this way: VST's ordinary contract form rejects a
+parameter that is itself a separation-logic predicate, so the caller cannot
+simply pass evidence of pointer validity.
+
+Consequences:
+
+- The 32-bit range of results is promised unconditionally for `adler32` and
+  `adler32_z`. For the combine functions it is promised only for valid
+  checksum arguments. On an LP64 target they can return a 33-bit value when
+  given arguments that are not valid checksums. The manual promises nothing
+  for such arguments, so this is recorded as an observation, not a finding.
+- The form with ticks depends on the instrumentation function and on contract
+  transfer, neither of which exists yet. The contract transfer spike comes
+  before the contracts are written and proven in full.
+
 ## Milestones
 
 ### Milestone 1: Adler-32, end to end
@@ -880,8 +971,17 @@ Progress as of 2026-11-24:
   null buffer and a length of 1 dereferenced the null pointer, against the
   manual. It is resolved by a hardening patch with a witness test. As a
   result `adler32_z` will be listed as proven after a patch, not as is.
+- **Criterion 4, designed.** The Layer 3 contracts are drafted and the
+  design is adopted. They are not yet built or proven.
+- **Criterion 7, answered.** A VST contract cannot be carried back to a
+  function with a goto. A statement about executions can. The toy with a
+  forward goto is included. For the three files with goto, statements about
+  executions are adopted provisionally as the form of our claims.
+- **Criterion 6, started.** The goto transformation and the tick
+  instrumentation exist as Rocq functions in the spike, with contracts proven
+  for a transformed toy. Their behavior-preservation theorems are not proven.
 - **Not started:** the environment on the Linux machine, the build check,
-  contracts, proofs, the transformation theorems, and contract transfer.
+  and the proofs for the Adler-32 functions.
 
 ### Milestone 2: the inflate reference model
 
@@ -933,12 +1033,15 @@ Listed roughly in order of consequence.
 
 Small experiments that inform decisions above. None has been run.
 
-- **Contract transfer.** On a toy function with a forward goto, show that a
-  behavior-preservation theorem for the Clight transformation can carry a VST
-  contract from the transformed function back to the original. Part of
-  Milestone 1.
+- **Contract transfer.** Done on 2026-11-24. See
+  [spikes/transfer/README.md](spikes/transfer/README.md). A VST contract
+  cannot be carried back to a function with a goto. A statement about
+  executions can.
 - **Backward jumps.** Find a transformation for the two loops in the fast
   inflate path.
 - **Termination.** Instrument Adler-32 with the tick counter, prove its cost
   contract in VST, and state the two generic theorems precisely enough to
-  judge their difficulty. Part of Milestone 1.
+  judge their difficulty. Part of Milestone 1. The transfer spike already
+  proved a cost contract for an instrumented toy, and left two questions for
+  this one: how to keep the counter from changing the program's memory, and
+  how the counter is refilled between calls.
