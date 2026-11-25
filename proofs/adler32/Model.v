@@ -308,3 +308,110 @@ Proof.
   pose proof (Z.mod_pos_bound x base base_pos).
   assert (base = 65521) by reflexivity. lia.
 Qed.
+
+(** ** Combining two checksums
+
+    The C code for combining avoids division where it can.  It adds 65521 to
+    keep values non-negative and then subtracts 65521 or twice 65521 a fixed
+    number of times.  These lemmas say when that equals a true reduction. *)
+
+Lemma sub_once_ge v : base <= v -> sub_once v = v - base.
+Proof.
+  intros. unfold sub_once. rewrite Z.geb_leb.
+  destruct (Z.leb_spec base v); lia.
+Qed.
+
+Lemma sub_once_lt v : v < base -> sub_once v = v.
+Proof.
+  intros. unfold sub_once. rewrite Z.geb_leb.
+  destruct (Z.leb_spec base v); lia.
+Qed.
+
+(** Subtract twice the modulus, if the value is at least that. *)
+Definition sub_twice (y : Z) : Z := if y >=? 2 * base then y - 2 * base else y.
+
+Lemma sub_twice_ge v : 2 * base <= v -> sub_twice v = v - 2 * base.
+Proof.
+  intros. unfold sub_twice. rewrite Z.geb_leb.
+  destruct (Z.leb_spec (2 * base) v); lia.
+Qed.
+
+Lemma sub_twice_lt v : v < 2 * base -> sub_twice v = v.
+Proof.
+  intros. unfold sub_twice. rewrite Z.geb_leb.
+  destruct (Z.leb_spec (2 * base) v); lia.
+Qed.
+
+Lemma mod_shift x k : 0 <= x - k * base < base -> x mod base = x - k * base.
+Proof.
+  intros. symmetry. apply (Z.mod_unique x base k); [left; assumption | ring].
+Qed.
+
+(** The first half: [sum1 += a2 + BASE - 1], then two conditional
+    subtractions. *)
+Lemma combine_sum1 x y :
+  0 <= x < base -> 0 <= y < base ->
+  sub_once (sub_once (x + y + 65520)) = (x + y - 1) mod base.
+Proof.
+  intros Hx Hy. assert (Hb : base = 65521) by reflexivity.
+  assert (C : x + y = 0 \/ 1 <= x + y <= 65521 \/ 65522 <= x + y) by lia.
+  destruct C as [C | [C | C]].
+  - rewrite (sub_once_lt (x + y + 65520)) by lia.
+    rewrite sub_once_lt by lia. rewrite (mod_shift _ (-1)) by lia. lia.
+  - rewrite (sub_once_ge (x + y + 65520)) by lia.
+    rewrite sub_once_lt by lia. rewrite (mod_shift _ 0) by lia. lia.
+  - rewrite (sub_once_ge (x + y + 65520)) by lia.
+    rewrite sub_once_ge by lia. rewrite (mod_shift _ 1) by lia. lia.
+Qed.
+
+(** The second half: a conditional subtraction of twice the modulus, then
+    one of the modulus, reduces any value below four times the modulus. *)
+Lemma sub_twice_once v :
+  0 <= v < 4 * base -> sub_once (sub_twice v) = v mod base.
+Proof.
+  intros Hv. assert (Hb : base = 65521) by reflexivity.
+  assert (C : v < base \/ base <= v < 2 * base \/
+              2 * base <= v < 3 * base \/ 3 * base <= v) by lia.
+  destruct C as [C | [C | [C | C]]].
+  - rewrite sub_twice_lt, sub_once_lt by lia. rewrite (mod_shift _ 0) by lia. lia.
+  - rewrite sub_twice_lt, sub_once_ge by lia. rewrite (mod_shift _ 1) by lia. lia.
+  - rewrite sub_twice_ge by lia. rewrite sub_once_lt by lia.
+    rewrite (mod_shift _ 2) by lia. lia.
+  - rewrite sub_twice_ge by lia. rewrite sub_once_ge by lia.
+    rewrite (mod_shift _ 3) by lia. lia.
+Qed.
+
+(** What the second half computes, for reduced halves and a non-negative
+    length. *)
+Lemma combine_sum2 a b1 b2 len2 :
+  0 <= a < base -> 0 <= b1 < base -> 0 <= b2 < base ->
+  sub_once (sub_twice ((len2 mod base * a) mod base + b1 + b2 + 65521
+                       - len2 mod base))
+  = (b1 + b2 + len2 * (a - 1)) mod base.
+Proof.
+  intros Ha H1 H2. assert (Hb : base = 65521) by reflexivity.
+  pose proof (Z.mod_pos_bound len2 base base_pos) as Hrem.
+  pose proof (Z.mod_pos_bound (len2 mod base * a) base base_pos) as Hp.
+  rewrite sub_twice_once by lia.
+  destruct (mod_decomp len2) as [q1 E1].
+  destruct (mod_decomp (len2 mod base * a)) as [q2 E2].
+  rewrite E2, E1.
+  apply mod_eq_intro with (k := 1 - q2 - q1 * (a - 1)).
+  rewrite Hb. ring.
+Qed.
+
+Lemma sub_once_bounds v : 0 <= v -> 0 <= sub_once v <= v.
+Proof.
+  intros. assert (Hb : base = 65521) by reflexivity.
+  destruct (Z_lt_dec v base).
+  - rewrite sub_once_lt by lia. lia.
+  - rewrite sub_once_ge by lia. lia.
+Qed.
+
+Lemma sub_twice_bounds v : 0 <= v -> 0 <= sub_twice v <= v.
+Proof.
+  intros. assert (Hb : base = 65521) by reflexivity.
+  destruct (Z_lt_dec v (2 * base)).
+  - rewrite sub_twice_lt by lia. lia.
+  - rewrite sub_twice_ge by lia. lia.
+Qed.

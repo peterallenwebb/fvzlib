@@ -21,20 +21,29 @@ contracts attach directly to the code that ships.
 | `adler32_z` | Non-null, non-empty buffer, any 64-bit checksum argument | Memory safe, buffer unchanged, result below 2^32, and result satisfies the Layer 2 specification |
 | `adler32` | Null buffer, any length | As for `adler32_z` |
 | `adler32` | Non-null, non-empty buffer | As for `adler32_z` |
+| `adler32_combine` | Any two 64-bit arguments and any 64-bit signed length | Result satisfies the Layer 2 specification |
+| `adler32_combine64` | The same | The same |
 
-"Satisfies the Layer 2 specification" means: if the checksum argument is the
-Adler-32 checksum of some earlier bytes, the result is the Adler-32 checksum
-of those bytes followed by the buffer, as RFC 1950 defines it.
+Every function in `adler32.c` is covered: the four exported functions above
+and the internal function that both combine functions call.
 
-All four proofs rest on VST's standard axioms only.
+"Satisfies the Layer 2 specification" means, for `adler32_z` and `adler32`:
+if the checksum argument is the Adler-32 checksum of some earlier bytes, the
+result is the Adler-32 checksum of those bytes followed by the buffer, as RFC
+1950 defines it. For the combine functions it means: if the two arguments
+are the checksums of two byte sequences and the length is that of the
+second, the result is the checksum of the two sequences joined.
+
+All seven proofs rest on VST's standard axioms only.
 
 ## What is not proven here
 
 - **A non-null buffer of length zero.** It needs the more general buffer
   description from the Layer 3 design, in which the buffer is a run of bytes
   inside a non-empty array.
-- **The combine functions.** `adler32_combine` and `adler32_combine64` are
-  not started.
+- **A 32-bit range for the combine functions.** Their contract does not
+  promise that the result fits in 32 bits. For arguments that are not
+  checksums it need not, and the manual promises nothing for those.
 - **Cost.** These contracts have no cost clause. Cost bounds for `adler32_z`
   and `adler32` are proven separately, for instrumented code, in
   `spikes/termination`.
@@ -60,6 +69,7 @@ at the null pointer. That is finding F0001, seen from the proof's side.
 | `Spec.v` | The contracts. |
 | `Verif.v` | The proofs for `adler32_z`. |
 | `VerifWrapper.v` | The proofs for `adler32`. |
+| `Combine.v` | The contracts and proofs for the combine functions. |
 
 Three points about the argument:
 
@@ -73,6 +83,16 @@ Three points about the argument:
    65521. Every genuine running checksum meets that condition, which is why
    the contract is stated against the Layer 2 specification and not as an
    exact value for every input.
+
+Two points about the combine functions:
+
+1. **The formula avoids division.** The code adds 65521 to keep values
+   non-negative, then subtracts 65521, or twice 65521, a fixed number of
+   times. `Model.v` proves that this equals a true reduction for the ranges
+   that arise, and that the result is the closed form for the checksum of a
+   concatenation that Layer 1 proves.
+2. **A negative length returns early.** The specification allows any result
+   there, as the manual says, so that branch needs no arithmetic.
 
 ## Building
 

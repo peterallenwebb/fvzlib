@@ -17,7 +17,8 @@ PATCHED := $(ROOT)/build/zlib-patched
 FLAGS   := -Q . fvzlib.proofs.adler32 \
            -Q $(ROOT)/spec/format fvzlib.format -Q $(ROOT)/spec/api fvzlib.api
 DEFINES := -DHAVE_UNISTD_H -DHAVE_STDARG_H -DHAVE_HIDDEN -D_LARGEFILE64_SOURCE=1
-FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper
+FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper \
+           Combine
 
 .PHONY: all clean
 all: adler32_clight.v

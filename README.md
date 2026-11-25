@@ -19,8 +19,8 @@ made. See [Decisions](#decisions), [Milestones](#milestones), and
 [Open decisions](#open-decisions).
 
 Work on Milestone 1 is under way. The format specification and the API
-behavior model for Adler-32 exist, with their traceability file. The real
-`adler32_z` and `adler32` of patched zlib 1.4 are proven, in VST, to return
+behavior model for Adler-32 exist, with their traceability file. Every
+function in `adler32.c` of patched zlib 1.4 is proven, in VST, to return
 values that satisfy that specification, on the development machine. One
 finding about zlib 1.4 is recorded in the ledger and resolved by the first
 patch in the patch sequence.
@@ -1005,17 +1005,18 @@ Progress as of 2026-11-24:
   is applied to the real Adler-32 functions, and cost contracts are proven
   for `adler32_z` and `adler32`. The two generic theorems are stated in prose
   and not proven.
-- **Criteria 4 and 5, largely done for two functions.** See
-  [proofs/adler32/README.md](proofs/adler32/README.md). For the real
-  `adler32_z` and `adler32`, with no instrumentation, VST proves memory
-  safety and that the result satisfies the Layer 2 specification. That covers
-  a null buffer of any length and a non-null, non-empty buffer with any
-  64-bit checksum argument. The proofs rest on VST's standard axioms only and
-  were checked on the development machine. Cost bounds for the same two
-  functions are proven separately, for instrumented code. Still to do: a
-  non-null buffer of length zero, the combine functions, one combined
-  contract per function, and the listing of arithmetic constructs VST does
-  not check.
+- **Criteria 4 and 5, done for the main cases of every function.** See
+  [proofs/adler32/README.md](proofs/adler32/README.md). All five functions
+  of `adler32.c` are proven, with no instrumentation, to be memory safe and
+  to return values that satisfy the Layer 2 specification. For `adler32_z`
+  and `adler32` that covers a null buffer of any length and a non-null,
+  non-empty buffer with any 64-bit checksum argument. For the combine
+  functions it covers all arguments. The proofs rest on VST's standard
+  axioms only and were checked on the development machine. Cost bounds for
+  `adler32_z` and `adler32` are proven separately, for instrumented code.
+  Still to do: a non-null buffer of length zero, one combined contract per
+  function, cost bounds for the combine functions, and the listing of
+  arithmetic constructs VST does not check.
 - **Criterion 8, first evidence.** The null-buffer proof fails against
   pristine zlib 1.4 and passes against the patched source.
 - **Not started:** the environment on the Linux machine and the build
