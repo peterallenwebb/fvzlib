@@ -1,0 +1,17 @@
+# Differences between the source as built and the source as verified that
+# tools/check_build.py accepts.  Each entry needs a reason.
+#
+#   drop    a token sequence to remove before comparing
+#   side    "build", "verifier", or "both": where to remove it
+#   system  optional: apply only on this system, as `uname -s` prints it
+#   reason  why the difference cannot change what the code computes
+#
+# The check reports how often each entry was used.  Keep this list short.
+# An entry for the project's first target, Linux, needs the same care as a
+# trusted assumption.
+
+[[allow]]
+drop = '__attribute__ ( ( visibility ( "hidden" ) ) )'
+side = "build"
+system = "Darwin"
+reason = "CompCert on macOS preprocesses every attribute away. This one only hides a symbol from other libraries at link time."

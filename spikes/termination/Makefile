@@ -10,7 +10,8 @@
 
 PATCHED := ../../build/zlib-patched
 FLAGS   := -Q . "" -Q ../transfer ""
-DEFINES := -DHAVE_UNISTD_H -DHAVE_STDARG_H -DHAVE_HIDDEN -D_LARGEFILE64_SOURCE=1
+include ../../proofs/zlib.mk
+DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32 adler32_ticked Buffer verif_adler32_z_cost verif_adler32_cost
 
 .PHONY: all clean

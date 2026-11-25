@@ -25,6 +25,10 @@ values that satisfy that specification, on the development machine. One
 finding about zlib 1.4 is recorded in the ledger and resolved by the first
 patch in the patch sequence.
 
+The move to the x86-64 Linux target is prepared but not made. One script
+installs the pinned toolchain and one command runs every check and proof.
+Neither has run on that target yet.
+
 ## What is in the repository
 
 | Path | Contents |
@@ -38,9 +42,11 @@ patch in the patch sequence.
 | `patches/` | The patch sequence: one file per patch, and the `sequence` file that orders them |
 | `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
 | `references/` | Source documents, unmodified |
-| `tools/` | Checks run by the build |
-| `proofs/` | Layers 3 and 4. C contracts and the VST proofs that the code meets them. Checked on the development machine only for now, by their own makefile. |
+| `tools/` | Checks run by the build, and `bootstrap.sh`, which installs the pinned toolchain |
+| `env/` | The pinned package versions, and the list of accepted differences for the build check |
+| `proofs/` | Layers 3 and 4. C contracts and the VST proofs that the code meets them. Checked on the development machine only for now. `proofs/zlib.mk` holds the flags under which zlib sources are given to the verifier. |
 | `docs/design/` | Design notes and draft contracts that are not yet built |
+| `docs/moving-to-linux.md` | How to set up the x86-64 Linux machine |
 | `spikes/` | Exploratory experiments, each with its own README. Not part of the main build. |
 | `build/` | Generated. Holds the pristine and patched trees. Not committed. |
 
@@ -64,6 +70,19 @@ RFC 1950 and the pinned `zlib.h`. Last, it applies the patch sequence to a
 copy of upstream and runs each witness against both trees.
 
 The patch sequence currently holds one patch.
+
+To set up a machine from nothing and check everything, including the
+proofs:
+
+```
+tools/bootstrap.sh
+opam exec --switch=fvzlib -- make full
+```
+
+`make full` refuses to pass anywhere but x86-64 Linux, the project's first
+target. On another machine, `make full EXPLORATORY=1` runs the same checks
+and labels the result exploratory. See
+[docs/moving-to-linux.md](docs/moving-to-linux.md).
 
 ## Guiding principles
 
@@ -348,6 +367,8 @@ Decided 2026-11-24.
 
 All are installed from opam, using the default repository and the
 `coq-released` repository. The same versions are used on every machine.
+`env/packages.lock` pins every opam package in the switch, 23 in all, and
+`tools/check_env.py` compares an installation with it.
 
 Why these:
 
@@ -1051,8 +1072,18 @@ Progress as of 2026-11-24:
   guards.
 - **Criterion 8, first evidence.** The null-buffer proof fails against
   pristine zlib 1.4 and passes against the patched source.
-- **Not started:** the environment on the Linux machine and the build
-  check.
+- **Criterion 1, prepared.** `tools/bootstrap.sh` installs the pinned
+  toolchain into an opam switch, and `make full` checks the installation
+  against the lock file and then runs every check and proof. Tested on the
+  development machine from a fresh clone. Not yet run on the Linux machine.
+- **Criterion 2, prepared.** `tools/check_build.py` runs the upstream
+  `./configure`, takes the compile commands from the upstream makefile, and
+  compares the preprocessed source with what the verifier reads, token by
+  token, for the static and the shared library. On the development machine
+  the two agree for `adler32.c` over 2617 tokens, apart from one symbol
+  visibility attribute that CompCert removes on macOS. The comparison does
+  not cover declarations from system headers. The run that counts is the
+  one on the Linux machine, where `./configure` makes different choices.
 
 ### Milestone 2: the inflate reference model
 

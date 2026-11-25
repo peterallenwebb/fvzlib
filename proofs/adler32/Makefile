@@ -16,7 +16,8 @@ ROOT    := ../..
 PATCHED := $(ROOT)/build/zlib-patched
 FLAGS   := -Q . fvzlib.proofs.adler32 -Q $(ROOT)/proofs/lib fvzlib.proofs.lib \
            -Q $(ROOT)/spec/format fvzlib.format -Q $(ROOT)/spec/api fvzlib.api
-DEFINES := -DHAVE_UNISTD_H -DHAVE_STDARG_H -DHAVE_HIDDEN -D_LARGEFILE64_SOURCE=1
+include $(ROOT)/proofs/zlib.mk
+DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper \
            EmptyBuffer Combine CensusAdler32 CombineGuarded
 
