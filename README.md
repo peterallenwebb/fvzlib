@@ -18,10 +18,12 @@ Objectives are set as a starting point, and the high-level decisions are
 made. See [Decisions](#decisions), [Milestones](#milestones), and
 [Open decisions](#open-decisions).
 
-Work on Milestone 1 has started. The format specification and the API
-behavior model for Adler-32 exist, with their traceability file. No C proof
-work has started. One finding about zlib 1.4 is recorded in the ledger and
-resolved by the first patch in the patch sequence.
+Work on Milestone 1 is under way. The format specification and the API
+behavior model for Adler-32 exist, with their traceability file. The real
+`adler32_z` and `adler32` of patched zlib 1.4 are proven, in VST, to return
+values that satisfy that specification, on the development machine. One
+finding about zlib 1.4 is recorded in the ledger and resolved by the first
+patch in the patch sequence.
 
 ## What is in the repository
 
@@ -37,6 +39,7 @@ resolved by the first patch in the patch sequence.
 | `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
 | `references/` | Source documents, unmodified |
 | `tools/` | Checks run by the build |
+| `proofs/` | Layers 3 and 4. C contracts and the VST proofs that the code meets them. Checked on the development machine only for now, by their own makefile. |
 | `docs/design/` | Design notes and draft contracts that are not yet built |
 | `spikes/` | Exploratory experiments, each with its own README. Not part of the main build. |
 | `build/` | Generated. Holds the pristine and patched trees. Not committed. |
@@ -1002,11 +1005,21 @@ Progress as of 2026-11-24:
   is applied to the real Adler-32 functions, and cost contracts are proven
   for `adler32_z` and `adler32`. The two generic theorems are stated in prose
   and not proven.
-- **Criteria 4 and 5, partly done for cost.** The cost half of the contracts
-  for `adler32_z` and `adler32` is proven on the development machine, for a
-  non-null, non-empty buffer. The functional half is not started.
-- **Not started:** the environment on the Linux machine, the build check,
-  and the proofs for the Adler-32 functions.
+- **Criteria 4 and 5, largely done for two functions.** See
+  [proofs/adler32/README.md](proofs/adler32/README.md). For the real
+  `adler32_z` and `adler32`, with no instrumentation, VST proves memory
+  safety and that the result satisfies the Layer 2 specification. That covers
+  a null buffer of any length and a non-null, non-empty buffer with any
+  64-bit checksum argument. The proofs rest on VST's standard axioms only and
+  were checked on the development machine. Cost bounds for the same two
+  functions are proven separately, for instrumented code. Still to do: a
+  non-null buffer of length zero, the combine functions, one combined
+  contract per function, and the listing of arithmetic constructs VST does
+  not check.
+- **Criterion 8, first evidence.** The null-buffer proof fails against
+  pristine zlib 1.4 and passes against the patched source.
+- **Not started:** the environment on the Linux machine and the build
+  check.
 
 ### Milestone 2: the inflate reference model
 
