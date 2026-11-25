@@ -41,14 +41,19 @@ before or after, is to be derived from the general one.
 
 ## Cost bounds
 
-These bounds are proposed, not proven. One tick is charged at each function
-entry and each loop iteration.
+One tick is charged at each function entry and at each test of a loop
+condition, including the final test that fails.
 
-| Function | Bound in ticks |
-|---|---|
-| `adler32_z` | 1 + len/5552 + len/16 + 15 |
-| `adler32` | one more than `adler32_z` |
-| `adler32_combine`, `adler32_combine64` | 2 |
+| Function | Bound in ticks | Status |
+|---|---|---|
+| `adler32_z` | len/5552 + len/16 + 19 | Proven for the instrumented code in the termination spike, for a non-null, non-empty buffer |
+| `adler32` | one more than `adler32_z` | Proven in the same spike |
+| `adler32_combine`, `adler32_combine64` | 2 | Proposed, not proven |
+
+An earlier version of this note proposed `1 + len/5552 + len/16 + 15` for
+`adler32_z`. That was three ticks too low, because it did not count the
+final failing test of each loop. The draft contracts below still carry the
+old formula and are to be updated when they are built.
 
 ## Two forms from one definition
 

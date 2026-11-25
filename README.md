@@ -605,10 +605,30 @@ Alternatives rejected:
   bounds would not compose with the VST contracts.
 - Waiting for native total correctness in VST. None is available.
 
+Result of the termination spike, run 2026-11-24 and described in
+[spikes/termination/README.md](spikes/termination/README.md):
+
+- **A cost bound is proven for real code.** For the `adler32_z` of patched
+  zlib 1.4 with ticks added, VST proves memory safety and a bound of
+  `len/5552 + len/16 + 19` ticks. The `adler32` wrapper costs one more.
+- **The counter is refilled at each call site.** A client that sets the
+  counter to the callee's bound before each call needs no budget of its own
+  and can make any number of calls. The bound applies to each call.
+- **Erasing the ticks gives back the original function bodies exactly**, for
+  all five functions of `adler32.c`.
+- **The counter stays a global variable.** The alternatives considered do not
+  avoid a change to the program's memory, so the erasure theorem must relate
+  two programs whose memories differ by one block.
+- **Both generic theorems remain unproven.** That bounded ticks bound the
+  steps is a measure argument of a few hundred lines. That erasure preserves
+  behavior is a simulation across differing memories, estimated at one to two
+  thousand lines, and is the larger risk.
+
 Risks:
 
 - **Proof overhead.** Every loop invariant gains a term relating the counter
-  to progress. For zlib's loops that relation is usually linear.
+  to progress. In the spike this was one clause per invariant and one tactic
+  call per tick.
 - **Shared risk with goto.** If contracts cannot be carried back to the
   original code, the fallback for termination is a whole-program statement,
   which VST's top-level soundness theorem already supports.
@@ -977,9 +997,14 @@ Progress as of 2026-11-24:
   function with a goto. A statement about executions can. The toy with a
   forward goto is included. For the three files with goto, statements about
   executions are adopted provisionally as the form of our claims.
-- **Criterion 6, started.** The goto transformation and the tick
-  instrumentation exist as Rocq functions in the spike, with contracts proven
-  for a transformed toy. Their behavior-preservation theorems are not proven.
+- **Criterion 6, partly done.** The goto transformation and the tick
+  instrumentation exist as Rocq functions in the spikes. The instrumentation
+  is applied to the real Adler-32 functions, and cost contracts are proven
+  for `adler32_z` and `adler32`. The two generic theorems are stated in prose
+  and not proven.
+- **Criteria 4 and 5, partly done for cost.** The cost half of the contracts
+  for `adler32_z` and `adler32` is proven on the development machine, for a
+  non-null, non-empty buffer. The functional half is not started.
 - **Not started:** the environment on the Linux machine, the build check,
   and the proofs for the Adler-32 functions.
 
@@ -1039,9 +1064,8 @@ Small experiments that inform decisions above. None has been run.
   executions can.
 - **Backward jumps.** Find a transformation for the two loops in the fast
   inflate path.
-- **Termination.** Instrument Adler-32 with the tick counter, prove its cost
-  contract in VST, and state the two generic theorems precisely enough to
-  judge their difficulty. Part of Milestone 1. The transfer spike already
-  proved a cost contract for an instrumented toy, and left two questions for
-  this one: how to keep the counter from changing the program's memory, and
-  how the counter is refilled between calls.
+- **Termination.** Done on 2026-11-24. See
+  [spikes/termination/README.md](spikes/termination/README.md). A cost
+  contract is proven for the real `adler32_z` and `adler32` with ticks added.
+  The two theorems that would carry it to the original code are stated in
+  prose and not proven.
