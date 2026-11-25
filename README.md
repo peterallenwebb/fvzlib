@@ -33,7 +33,7 @@ patch in the patch sequence.
 | `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
 | `audit/` | Lists of results that must depend on no axioms |
 | `trace/` | Traceability from source sentences to definitions and theorems |
-| `ledger/` | Findings about zlib, one file each |
+| `ledger/` | Findings about zlib, and obligations not yet proven, one file each |
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
 | `patches/` | The patch sequence: one file per patch, and the `sequence` file that orders them |
 | `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
@@ -814,6 +814,30 @@ exploratory.
 Most of the signed shifts come from small unsigned types that C promotes to a
 signed integer before shifting. The tree code alone has 56.
 
+First results, 2026-11-24, described in
+[proofs/lib/README.md](proofs/lib/README.md):
+
+- **The census exists.** It is a Rocq function that lists every construct of
+  the four kinds in a function, with a status for each: closed by its
+  constants, closed by its types, or open.
+- **Open items become proof obligations through guards.** A second function
+  puts a test for the bad operand values in front of each open item, with a
+  jump to a missing label if the test succeeds. VST can only prove such a
+  jump unreachable, so proving the guarded function shows the bad values
+  never arise. Guards exist for division, remainder, and right shifts. Left
+  shifts and conversions are still to do.
+- **`adler32.c` is done.** Its census has two items. One is closed by its
+  constants. The other, a signed remainder in the combine function, was open
+  and is now closed by a proof of the guarded function.
+- **The whole core has about 100 open items**, in a preview run over
+  pristine zlib 1.4: 69 left shifts, 5 right shifts, 2 divisions, and 24
+  conversions. The automatic rules close 82 others.
+
+The counts in the table above were made earlier with a script and differ for
+right shifts. The script looked at the type of the result. The census looks
+at how C promotes the operand, which is what decides whether a shift is a
+signed one.
+
 Not chosen: CBMC, which is bounded only and remains a reasonable later
 addition. Cerberus and CN, which are closest to the standard's text but
 describe themselves as a reference semantics for small programs and as
@@ -1015,8 +1039,13 @@ Progress as of 2026-11-24:
   axioms only and were checked on the development machine. Cost bounds for
   `adler32_z` and `adler32` are proven separately, for instrumented code.
   Still to do: a non-null buffer of length zero, one combined contract per
-  function, cost bounds for the combine functions, and the listing of
-  arithmetic constructs VST does not check.
+  function, and cost bounds for the combine functions.
+- **The arithmetic VST does not check, done for this file.** The census for
+  `adler32.c` lists two items. One is closed by its constants and the other
+  by a proof of the guarded function.
+- **Ledger.** It now also records the three transformation obligations that
+  remain unproven: goto elimination, tick instrumentation, and arithmetic
+  guards.
 - **Criterion 8, first evidence.** The null-buffer proof fails against
   pristine zlib 1.4 and passes against the patched source.
 - **Not started:** the environment on the Linux machine and the build

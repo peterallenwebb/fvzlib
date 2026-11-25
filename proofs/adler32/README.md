@@ -49,8 +49,33 @@ All seven proofs rest on VST's standard axioms only.
   `spikes/termination`.
 - **One contract per function.** Each function has two contracts here, one
   for each case. They are not yet combined into a single contract.
-- **The gap VST leaves.** The listing of unchecked arithmetic constructs,
-  and the extra obligations it calls for, are not done.
+- **The rest of the gap VST leaves.** The arithmetic VST does not check is
+  listed and dealt with below. Aliasing, pointer arithmetic that leaves an
+  object, and evaluation order are not addressed.
+
+## Arithmetic that VST does not check
+
+`CensusAdler32.v` lists, for every function in the file, each signed shift,
+signed division or remainder, and conversion into a signed type that may
+not fit. See [proofs/lib](../lib/README.md) for what the census is. The
+whole list for `adler32.c` has two items.
+
+| Function | Item | Status |
+|---|---|---|
+| `adler32_z` | `NMAX / 16`, a signed division | Closed by its constants, 5552 and 16 |
+| Internal combine function | `len2 %= BASE`, a signed remainder | Open, then closed by proof |
+
+The remainder is implementation-defined in the 1990 C standard when `len2`
+is negative. `CombineGuarded.v` applies the guard transformation, which puts
+a test for a negative `len2` in front of that statement, and proves the same
+contract for the guarded function. VST can only prove the guard's jump
+unreachable, so the proof shows `len2` is never negative there.
+
+Two honest limits. The guarded proof repeats the steps of the plain proof,
+since we do not yet have a way to run one proof script against both forms of
+a function. And the step from "the guarded function never gets stuck" to
+"the original never takes a remainder of a negative value" rests on an
+unproven obligation, recorded in the ledger as T0003.
 
 ## The patch matters
 
@@ -70,6 +95,8 @@ at the null pointer. That is finding F0001, seen from the proof's side.
 | `Verif.v` | The proofs for `adler32_z`. |
 | `VerifWrapper.v` | The proofs for `adler32`. |
 | `Combine.v` | The contracts and proofs for the combine functions. |
+| `CensusAdler32.v` | The census for this file, pinned as checked statements. |
+| `CombineGuarded.v` | The proof that closes the one open census item. |
 
 Three points about the argument:
 

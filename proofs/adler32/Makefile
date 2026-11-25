@@ -14,14 +14,15 @@
 
 ROOT    := ../..
 PATCHED := $(ROOT)/build/zlib-patched
-FLAGS   := -Q . fvzlib.proofs.adler32 \
+FLAGS   := -Q . fvzlib.proofs.adler32 -Q $(ROOT)/proofs/lib fvzlib.proofs.lib \
            -Q $(ROOT)/spec/format fvzlib.format -Q $(ROOT)/spec/api fvzlib.api
 DEFINES := -DHAVE_UNISTD_H -DHAVE_STDARG_H -DHAVE_HIDDEN -D_LARGEFILE64_SOURCE=1
 FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper \
-           Combine
+           Combine CensusAdler32 CombineGuarded
 
 .PHONY: all clean
 all: adler32_clight.v
+	$(MAKE) -C $(ROOT)/proofs/lib
 	for f in $(FILES); do rocq compile $(FLAGS) $$f.v || exit 1; done
 
 adler32_clight.v: $(PATCHED)/adler32.c
