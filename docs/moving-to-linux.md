@@ -35,8 +35,8 @@ Podman.
 
    The first run builds the toolchain image from `env/Containerfile`. It
    compiles OCaml, Rocq, CompCert, and VST from source. That took about
-   fifteen minutes on a 16-core machine and will take longer on a smaller
-   one. Later runs reuse the image, and `make full` then takes about three
+   fifteen minutes on a 16-core machine and 31 minutes on a hosted runner
+   with 4 processors. Later runs reuse the image, and `make full` then takes about three
    and a half minutes.
 
    `make full` is the one command behind Milestone 1's first two exit
@@ -129,7 +129,9 @@ matching project directory on the Linux machine.
   checksum.
 - **Two builds of the image give the same versions, not the same bytes.**
 - **The built image is not published.** Each person builds their own.
-- **The image has been built once, on one machine.** A build on a second
-  machine is the real test that others can replicate it.
+- **The image has been built twice, on the same day**, on two machines:
+  the development laptop and a hosted runner in continuous integration.
+  Both gave the same versions and the same results. That does not yet show
+  the image can still be built once the outside services have moved on.
 - **`make full` records what it ran on** in `build/environment.txt`: the
   image, its pins, and the compiler version.

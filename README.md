@@ -28,8 +28,9 @@ patch in the patch sequence.
 
 The work moved to the x86-64 Linux target on 2026-11-25. The target
 environment is a container, defined by one file, and one command runs every
-check and proof inside it. That command passes. So far the container has
-been built once, on one machine.
+check and proof inside it. That command passes on two machines: the
+development laptop, and a hosted runner where continuous integration builds
+the container from nothing.
 
 ## What is in the repository
 
@@ -1009,7 +1010,7 @@ Consequences:
 
 ### The build environment: a container
 
-Decided 2026-11-25. Built and used the same day, on one machine.
+Decided 2026-11-25. Built and used the same day, on two machines.
 
 Every check and proof for the first target runs inside a container. One
 file, `env/Containerfile`, defines the image. One script,
@@ -1064,8 +1065,13 @@ Limits:
   source archives from. opam checks each archive against a checksum.
 - **Two builds give the same versions, not the same bytes.** Compilers
   record times and paths in their output.
-- **The image has been built once, on one machine.** A build on a second
-  machine is the real test that others can replicate it.
+- **The image has been built twice, on the same day.** The two builds were
+  on different machines and gave the same package versions and the same
+  results. That does not yet show the image can still be built once the
+  outside services have moved on.
+- **opam itself is version 2.5.0, from the Ubuntu snapshot.** It prints a
+  notice that versions from 2.5.2 include security fixes. We have not
+  looked into what they fix.
 - **The built image is not published.** A published copy, named by digest,
   would remove both limits above. It would also redistribute CompCert, so
   the terms of CompCert's license must be checked first.
@@ -1200,11 +1206,18 @@ Progress as of 2026-11-24:
 
 Progress on 2026-11-25, the move to the first target:
 
-- **Criterion 1, met on one machine.** The toolchain container builds from
+- **Criterion 1, met on two machines.** The toolchain container builds from
   `env/Containerfile`, and `tools/in-container.sh make full` passes in it
   from a clean tree, in about three and a half minutes. The container pins
   the system packages and the opam build recipes as well as the opam
-  package versions. It has been built once, on one host.
+  package versions. It was built on the development laptop, with Podman
+  5.7, and again from nothing on a hosted runner with 4 processors and
+  Podman 4.9.3, where the build took 31 minutes and `make full` took five
+  and a half. Both runs report the same pins, the same 2655 tokens in the
+  build check, and the same axioms.
+- **Continuous integration runs.** `.github/workflows/full.yml` passed at
+  its first run, on the commit that added it. That run built the image and
+  put it in the cache. No run has yet taken the image from the cache.
 - **Criterion 2, met for `adler32.c`.** The flags in `proofs/zlib.mk`
   predicted the choices of `./configure` on Linux correctly. The source as
   built and the source as verified agree over 2655 tokens, for the static
@@ -1278,8 +1291,10 @@ Listed roughly in order of consequence.
    workflow, `.github/workflows/full.yml`, was written on 2026-11-25. On
    every push to `main` and every pull request it builds the toolchain
    container, or takes it from a cache, and runs `make full` in it. Its
-   steps were rehearsed by hand from a fresh clone. The workflow itself has
-   not run yet.
+   first run passed, in 37 minutes, of which 31 were the image build. The
+   objective that CI compares the assumption list against an allowed set
+   is met only for the results listed in `audit/`. The lists that the VST
+   proofs print are not compared yet.
 
 ## Planned spikes
 
