@@ -1033,13 +1033,16 @@ Progress as of 2026-11-24:
   [proofs/adler32/README.md](proofs/adler32/README.md). All five functions
   of `adler32.c` are proven, with no instrumentation, to be memory safe and
   to return values that satisfy the Layer 2 specification. For `adler32_z`
-  and `adler32` that covers a null buffer of any length and a non-null,
-  non-empty buffer with any 64-bit checksum argument. For the combine
+  and `adler32` that covers a null buffer of any length, a non-null,
+  non-empty buffer, and a non-null buffer of length zero, each with any
+  64-bit checksum argument. For the combine
   functions it covers all arguments. The proofs rest on VST's standard
   axioms only and were checked on the development machine. Cost bounds for
   `adler32_z` and `adler32` are proven separately, for instrumented code.
-  Still to do: a non-null buffer of length zero, one combined contract per
-  function, and cost bounds for the combine functions.
+  The zero-length case uses the buffer description from the Layer 3
+  decision: a position in a non-empty array the caller owns. Still to do:
+  one combined contract per function, and cost bounds for the combine
+  functions.
 - **The arithmetic VST does not check, done for this file.** The census for
   `adler32.c` lists two items. One is closed by its constants and the other
   by a proof of the guarded function.

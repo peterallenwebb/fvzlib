@@ -19,8 +19,10 @@ contracts attach directly to the code that ships.
 |---|---|---|
 | `adler32_z` | Null buffer, any length | Returns a value satisfying the Layer 2 specification, which is the initial value 1 |
 | `adler32_z` | Non-null, non-empty buffer, any 64-bit checksum argument | Memory safe, buffer unchanged, result below 2^32, and result satisfies the Layer 2 specification |
+| `adler32_z` | Non-null buffer of length zero, any 64-bit checksum argument | Memory safe, nothing read, the caller's array unchanged, result below 2^32, and result satisfies the Layer 2 specification |
 | `adler32` | Null buffer, any length | As for `adler32_z` |
 | `adler32` | Non-null, non-empty buffer | As for `adler32_z` |
+| `adler32` | Non-null buffer of length zero | As for `adler32_z` |
 | `adler32_combine` | Any two 64-bit arguments and any 64-bit signed length | Result satisfies the Layer 2 specification |
 | `adler32_combine64` | The same | The same |
 
@@ -34,21 +36,45 @@ result is the Adler-32 checksum of those bytes followed by the buffer, as RFC
 are the checksums of two byte sequences and the length is that of the
 second, the result is the checksum of the two sequences joined.
 
-All seven proofs rest on VST's standard axioms only.
+All nine proofs rest on VST's standard axioms only.
+
+## The buffer of length zero
+
+The manual allows a call with a buffer that is not null and a length of
+zero. The code reads nothing in that call, but it does compare the pointer
+with null. C defines that comparison only for null and for a pointer into an
+object or one past its end. So the contract cannot accept any value at all
+as the pointer.
+
+Following the Layer 3 design, the contract asks for a position in a
+non-empty array that the caller owns. The position may be anywhere from the
+first byte to one past the last. The proof shows that the comparison is one
+C defines, that the loop over the bytes exits before it reads, and that the
+array comes back unchanged.
+
+For no bytes, the Layer 2 specification says a genuine running checksum
+comes back as it went in. The code returns the two halves of its argument,
+each reduced modulo 65521, which is the same value for every genuine
+checksum.
+
+One call that C allows is outside this contract: a pointer to an allocation
+of size zero, such as some implementations return from `malloc(0)`.
+CompCert's memory model has no position in such a block that it accepts in
+a comparison, so VST cannot prove anything about that call.
 
 ## What is not proven here
 
-- **A non-null buffer of length zero.** It needs the more general buffer
-  description from the Layer 3 design, in which the buffer is a run of bytes
-  inside a non-empty array.
+- **A zero-length buffer in an allocation of size zero.** See above.
 - **A 32-bit range for the combine functions.** Their contract does not
   promise that the result fits in 32 bits. For arguments that are not
   checksums it need not, and the manual promises nothing for those.
 - **Cost.** These contracts have no cost clause. Cost bounds for `adler32_z`
   and `adler32` are proven separately, for instrumented code, in
   `spikes/termination`.
-- **One contract per function.** Each function has two contracts here, one
-  for each case. They are not yet combined into a single contract.
+- **One contract per function.** `adler32_z` and `adler32` each have three
+  contracts here, one for each case. They are not yet combined into a single
+  contract. The non-empty contract also still describes the buffer as a
+  whole array, not as a run of bytes inside a larger one.
 - **The rest of the gap VST leaves.** The arithmetic VST does not check is
   listed and dealt with below. Aliasing, pointer arithmetic that leaves an
   object, and evaluation order are not addressed.
@@ -94,6 +120,7 @@ at the null pointer. That is finding F0001, seen from the proof's side.
 | `Spec.v` | The contracts. |
 | `Verif.v` | The proofs for `adler32_z`. |
 | `VerifWrapper.v` | The proofs for `adler32`. |
+| `EmptyBuffer.v` | The contracts and proofs for a buffer of length zero. |
 | `Combine.v` | The contracts and proofs for the combine functions. |
 | `CensusAdler32.v` | The census for this file, pinned as checked statements. |
 | `CombineGuarded.v` | The proof that closes the one open census item. |
