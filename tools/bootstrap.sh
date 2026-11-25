@@ -2,6 +2,7 @@
 # Set up the pinned fvzlib toolchain.
 #
 #   tools/bootstrap.sh
+#   tools/bootstrap.sh --toolchain-only
 #
 # Creates an opam switch, by default named `fvzlib`, and installs into it the
 # exact package versions listed in env/packages.lock.  It is safe to run
@@ -12,10 +13,21 @@
 # The first run compiles OCaml, Rocq, CompCert, and VST from source, which
 # takes from fifteen minutes to an hour.
 #
+# With --toolchain-only it needs only itself and env/packages.lock.  It does
+# not fetch upstream zlib and does not run the final check.  env/Containerfile
+# uses this to build the toolchain image, where the repository is absent.
+#
 # Environment:
 #   FVZLIB_SWITCH   name of the opam switch (default: fvzlib)
 
 set -eu
+
+TOOLCHAIN_ONLY=""
+case "${1:-}" in
+    "") ;;
+    --toolchain-only) TOOLCHAIN_ONLY=yes ;;
+    *) printf 'usage: tools/bootstrap.sh [--toolchain-only]\n' >&2; exit 2 ;;
+esac
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 SWITCH=${FVZLIB_SWITCH:-fvzlib}
@@ -62,7 +74,7 @@ fi
 
 # ---- upstream source ------------------------------------------------------
 
-if [ ! -f "$ROOT/upstream/zlib/zlib.h" ]; then
+if [ -z "$TOOLCHAIN_ONLY" ] && [ ! -f "$ROOT/upstream/zlib/zlib.h" ]; then
     say "fetching the pinned upstream zlib"
     git -C "$ROOT" submodule update --init
 fi
@@ -86,6 +98,11 @@ say "installing the pinned packages"
 opam install --switch="$SWITCH" --yes $(tr '\n' ' ' < "$LOCK")
 
 # ---- confirm --------------------------------------------------------------
+
+if [ -n "$TOOLCHAIN_ONLY" ]; then
+    say "done.  The toolchain is installed in the switch $SWITCH."
+    exit 0
+fi
 
 opam exec --switch="$SWITCH" -- python3 "$ROOT/tools/check_env.py" --exploratory
 

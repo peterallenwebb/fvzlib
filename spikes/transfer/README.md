@@ -1,7 +1,9 @@
 # Spike: contract transfer
 
 Run on 2026-11-24 on the development machine, an ARM Mac, with Rocq 9.2.0,
-CompCert 3.18, and VST 2.17. Exploratory. Not part of the main build.
+CompCert 3.18, and VST 2.17. Run again on 2026-11-25 on the project's first
+target, x86-64 Linux, in the toolchain container, where every file checks.
+Exploratory. Not part of the main build.
 
 ## The question
 

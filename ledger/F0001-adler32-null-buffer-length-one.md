@@ -61,8 +61,9 @@ ARM macOS, at both `-O0` and `-O2`:
 | 2 | Prints 1 |
 | 1 | Killed by a segmentation fault, exit status 139 |
 
-This witness was run on the development machine. It must be repeated on the
-x86-64 Linux target.
+This witness was run on the development machine. The build's own witness,
+which makes the call with a length of 1, was repeated on the x86-64 Linux
+target on 2026-11-25. See Resolution below.
 
 ## Assessment
 
@@ -90,7 +91,8 @@ argument in full.
 The build applies the patch and runs the witness against both trees. The
 witness must fail on pristine zlib and pass on the patched tree. On the
 development machine it is killed by signal 11 on the pristine tree and exits
-with status 0 on the patched one.
+with status 0 on the patched one. On the x86-64 Linux target, built with gcc
+15.2, the result is the same.
 
 ## Cost
 

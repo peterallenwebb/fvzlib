@@ -3,11 +3,11 @@
 Layers 3 and 4 for `adler32.c` of patched zlib 1.4: the C contracts and the
 VST proofs that the code meets them.
 
-Checked on 2026-11-24 on the development machine, an ARM Mac, with Rocq
-9.2.0, CompCert 3.18, and VST 2.17. The project's first target is x86-64
-Linux. The C types involved are the same there, so these proofs are expected
-to carry over, but they have not been checked on that target. Until they
-are, they are not part of `make check` at the top of the repository.
+Checked on 2026-11-25 on the project's first target, x86-64 Linux, in the
+toolchain container, with Rocq 9.2.0, CompCert 3.18, and VST 2.17. They were
+first checked on 2026-11-24 on an ARM Mac and carried over with no change to
+any proof script. `make full` at the top of the repository runs them.
+`make check` does not, because they need VST.
 
 ## What is proven
 

@@ -1,51 +1,46 @@
-# Moving the work to the x86-64 Linux machine
+# Moving the work to x86-64 Linux
 
 The project's first target is zlib 1.4 on x86-64 Linux. Until now every
 proof has been checked on an ARM Mac, where the results are exploratory.
-This note says how to set up the Linux machine and what to expect.
+This note says how to run the work on the target and what to expect.
+
+The target environment is a container. The reasons are in the README, under
+"The build environment: a container". The host machine needs only git and
+Podman.
 
 ## Steps
 
-1. **Get the repository onto the machine.** The repository has no remote
-   yet. Either push it to a private remote and clone from there, or copy it
-   across with a git bundle:
+1. **Get the repository, with the pinned zlib.**
 
    ```
-   git bundle create fvzlib.bundle --all
+   git clone --recurse-submodules <repository URL> fvzlib
    ```
 
-   On the Linux machine, `git clone fvzlib.bundle fvzlib`.
+   In an existing clone, `git submodule update --init` fetches zlib.
 
-2. **Install the system tools.** The setup script needs opam, git, make,
-   gcc, m4, patch, pkg-config, Python 3.11 or later, and the GMP development
-   files. On Debian or Ubuntu:
+2. **Install Podman.** On Debian or Ubuntu:
 
    ```
-   sudo apt install opam git make gcc m4 patch python3 pkg-config libgmp-dev
+   sudo apt install podman
    ```
 
-   If opam has never been used by this user, run `opam init` once.
+   Podman runs the container as the ordinary user. No daemon and no group
+   membership is needed.
 
-3. **Install the pinned toolchain.**
-
-   ```
-   tools/bootstrap.sh
-   ```
-
-   This fetches the pinned upstream zlib, creates an opam switch named
-   `fvzlib`, and installs the exact package versions listed in
-   `env/packages.lock`. It compiles OCaml, Rocq, CompCert, and VST from
-   source, so the first run takes from fifteen minutes to an hour. It can be
-   run again safely.
-
-4. **Check everything.**
+3. **Check everything.**
 
    ```
-   opam exec --switch=fvzlib -- make full
+   tools/in-container.sh make full
    ```
 
-   This is the one command behind Milestone 1's first two exit criteria. It
-   runs, in order:
+   The first run builds the toolchain image from `env/Containerfile`. It
+   compiles OCaml, Rocq, CompCert, and VST from source. That took about
+   fifteen minutes on a 16-core machine and will take longer on a smaller
+   one. Later runs reuse the image, and `make full` then takes about three
+   and a half minutes.
+
+   `make full` is the one command behind Milestone 1's first two exit
+   criteria. It runs, in order:
 
    | Step | What it checks |
    |---|---|
@@ -55,25 +50,68 @@ This note says how to set up the Linux machine and what to expect.
    | `proofs` | Every VST proof for `adler32.c` |
    | `spikes` | The contract transfer and termination spikes |
 
-## What to expect
+Other uses of the script:
 
-Some steps may fail on the first run. Each failure tells us something we
-need to know, and none can be seen from the Mac.
+| Command | What it does |
+|---|---|
+| `tools/in-container.sh` | Opens a shell in the container |
+| `tools/in-container.sh make check` | Runs any one command there |
+| `tools/in-container.sh --build` | Builds the image if needed and prints its name |
 
-- **`build-check` is the most likely to report something.** On Linux the
-  upstream `./configure` makes choices it does not make on the Mac. In
-  particular it turns on the 64-bit file offset interface. The flags in
-  `proofs/zlib.mk` are our prediction of its choices for Linux. This run is
-  the first real test of that prediction. A difference is printed as the
-  lines of code that differ.
-- **The proofs may need small repairs.** They are about the Clight that
-  CompCert generates for the local target. The C types involved are the same
-  on both machines, so we expect the proofs to carry over, but that is a
-  prediction too.
-- **Files that pin a syntax tree may need regenerating.** The spikes and the
-  guarded combine proof each hold a transformed copy of a function. If
-  CompCert names a temporary differently on x86-64, those copies will no
-  longer match and must be regenerated.
+The repository is mounted in the container at `/fvzlib`. Files are edited on
+the host as usual, and build products appear in the host's working tree.
+
+## What the first run found
+
+The move was made on 2026-11-25, on an x86-64 machine running Ubuntu 26.04
+with Podman 5.7. `make full` now passes in the container from a clean tree.
+The first run stopped twice.
+
+- **The image built at the first attempt.**
+- **`build-check` reported one difference.** The flags in `proofs/zlib.mk`
+  were a prediction of what the upstream `./configure` chooses on Linux,
+  and the prediction was right. The one difference was the symbol
+  visibility attribute on two declarations in `zutil.h`. CompCert undefines
+  `__GNUC__` when it preprocesses, and the C library then defines
+  `__attribute__` away. The same difference was already accepted on macOS,
+  where it has another cause. It is now also accepted on Linux, in
+  `env/build-check-allow.toml`, with its reason.
+- **Every proof carried over.** No proof script changed.
+- **Two files named CompCert built-in functions that exist only on ARM.**
+  The guarded combine proof and the ticked spike each keep a list of names
+  that a computation must leave folded. The lists now hold only the
+  identifiers of the source file. The computed syntax trees did not need
+  regenerating.
+
+Two checks that the README said must be repeated on the target were also
+run. The results are in the README, under "Toolchain versions" and "C
+standard editions".
+
+- **CompCert's front end translates all fifteen library source files.**
+- **The comparison across C editions gives a new result.** On Linux,
+  `gzread.c` differs under the 2023 edition, which gcc 15 uses by default.
+
+## Moving a pin
+
+The image's tag is a hash of `env/Containerfile`, `env/packages.lock`, and
+`tools/bootstrap.sh`. Changing any of them makes the next run of
+`tools/in-container.sh` build a new image. Old images stay until removed
+with `podman image rm`.
+
+## Without a container
+
+`tools/bootstrap.sh` installs the same opam packages into an opam switch on
+the machine itself. It needs opam, git, make, gcc, m4, patch, pkg-config,
+Python 3.11 or later, and the GMP development files, and it says what is
+missing. Then:
+
+```
+opam exec --switch=fvzlib -- make full
+```
+
+This route does not pin the system packages or the opam build recipes. Its
+results are a convenience. The results that count for the first target are
+those from the container.
 
 ## What does not travel with the repository
 
@@ -85,10 +123,13 @@ matching project directory on the Linux machine.
 
 ## Limits of the pinning
 
-- The lock file pins the version of every opam package. opam checks each
-  source archive against a checksum. The opam repositories themselves are
-  not pinned to a commit, so a package's build recipe could in principle
-  change under the same version number.
-- System packages are not pinned: the C compiler that preprocesses for
-  CompCert, the C library headers, and GMP. `make full` records the compiler
-  version in `build/environment.txt`.
+- **Building the image depends on outside services.** These are the image
+  registry, the Ubuntu snapshot service, GitHub, and the sites that opam
+  downloads source archives from. opam checks each archive against a
+  checksum.
+- **Two builds of the image give the same versions, not the same bytes.**
+- **The built image is not published.** Each person builds their own.
+- **The image has been built once, on one machine.** A build on a second
+  machine is the real test that others can replicate it.
+- **`make full` records what it ran on** in `build/environment.txt`: the
+  image, its pins, and the compiler version.

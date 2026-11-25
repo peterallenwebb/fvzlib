@@ -1,0 +1,5 @@
+# The image build reads only the files that define the toolchain.
+# See env/Containerfile.  Podman and Docker both read this file.
+*
+!env/packages.lock
+!tools/bootstrap.sh

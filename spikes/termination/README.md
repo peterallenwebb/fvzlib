@@ -1,7 +1,9 @@
 # Spike: termination and cost for the Adler-32 functions
 
 Run on 2026-11-24 on the development machine, an ARM Mac, with Rocq 9.2.0,
-CompCert 3.18, and VST 2.17. Exploratory. Not part of the main build.
+CompCert 3.18, and VST 2.17. Run again on 2026-11-25 on the project's first
+target, x86-64 Linux, in the toolchain container, where every file checks.
+Exploratory. Not part of the main build.
 
 ## The question
 
@@ -32,9 +34,9 @@ build checks by computation.
   buffer are not covered here.
 - **Instrumented code.** These are contracts for the code with ticks. What
   they imply for the original code depends on the two theorems below.
-- **This machine.** The syntax tree came from CompCert built for ARM macOS.
-  The C types involved are the same on x86-64 Linux, so the proofs are
-  expected to carry over, but that has not been checked.
+- **The target.** The proofs were written against the syntax tree from
+  CompCert built for ARM macOS. They pass unchanged against the tree for
+  x86-64 Linux.
 
 ## Findings
 

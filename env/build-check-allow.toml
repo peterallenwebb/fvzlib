@@ -15,3 +15,9 @@ drop = '__attribute__ ( ( visibility ( "hidden" ) ) )'
 side = "build"
 system = "Darwin"
 reason = "CompCert on macOS preprocesses every attribute away. This one only hides a symbol from other libraries at link time."
+
+[[allow]]
+drop = '__attribute__ ( ( visibility ( "hidden" ) ) )'
+side = "build"
+system = "Linux"
+reason = "CompCert undefines __GNUC__ when it preprocesses, and the C library's <sys/cdefs.h> then defines __attribute__ away for the rest of the file. This one only hides a symbol from other libraries at link time."

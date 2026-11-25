@@ -26,6 +26,8 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCK = ROOT / "env" / "packages.lock"
+# Written by env/Containerfile: what the toolchain image was built from.
+PINS = pathlib.Path("/etc/fvzlib-toolchain")
 TARGET = {"machine": "x86_64", "system": "Linux",
           "COMPCERT_ARCH": "x86", "COMPCERT_BITSIZE": "64",
           "COMPCERT_SYSTEM": "linux"}
@@ -99,6 +101,13 @@ def main():
     report.append("rocq: " + first_line(["rocq", "--version"]))
     report.append("C compiler: " + first_line(["cc", "--version"]))
     report.append("python: " + platform.python_version())
+
+    # ---- the container, when there is one ----
+    image = os.environ.get("FVZLIB_IMAGE")
+    if image:
+        report.append(f"container image: {image}")
+    if PINS.exists():
+        report.extend(PINS.read_text().splitlines())
 
     # ---- the target ----
     where = run(["rocq", "-where"]).stdout.strip()

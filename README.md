@@ -21,13 +21,15 @@ made. See [Decisions](#decisions), [Milestones](#milestones), and
 Work on Milestone 1 is under way. The format specification and the API
 behavior model for Adler-32 exist, with their traceability file. Every
 function in `adler32.c` of patched zlib 1.4 is proven, in VST, to return
-values that satisfy that specification, on the development machine. One
+values that satisfy that specification, on the project's first target,
+x86-64 Linux. One
 finding about zlib 1.4 is recorded in the ledger and resolved by the first
 patch in the patch sequence.
 
-The move to the x86-64 Linux target is prepared but not made. One script
-installs the pinned toolchain and one command runs every check and proof.
-Neither has run on that target yet.
+The work moved to the x86-64 Linux target on 2026-11-25. The target
+environment is a container, defined by one file, and one command runs every
+check and proof inside it. That command passes. So far the container has
+been built once, on one machine.
 
 ## What is in the repository
 
@@ -42,11 +44,11 @@ Neither has run on that target yet.
 | `patches/` | The patch sequence: one file per patch, and the `sequence` file that orders them |
 | `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
 | `references/` | Source documents, unmodified |
-| `tools/` | Checks run by the build, and `bootstrap.sh`, which installs the pinned toolchain |
-| `env/` | The pinned package versions, and the list of accepted differences for the build check |
-| `proofs/` | Layers 3 and 4. C contracts and the VST proofs that the code meets them. Checked on the development machine only for now. `proofs/zlib.mk` holds the flags under which zlib sources are given to the verifier. |
+| `tools/` | Checks run by the build, `bootstrap.sh`, which installs the pinned toolchain, and `in-container.sh`, which runs a command in the toolchain container |
+| `env/` | The pinned package versions, the `Containerfile` that defines the toolchain container, and the list of accepted differences for the build check |
+| `proofs/` | Layers 3 and 4. C contracts and the VST proofs that the code meets them. Checked on the first target by `make full`. `proofs/zlib.mk` holds the flags under which zlib sources are given to the verifier. |
 | `docs/design/` | Design notes and draft contracts that are not yet built |
-| `docs/moving-to-linux.md` | How to set up the x86-64 Linux machine |
+| `docs/moving-to-linux.md` | How to run the work on x86-64 Linux, and what the move found |
 | `spikes/` | Exploratory experiments, each with its own README. Not part of the main build. |
 | `build/` | Generated. Holds the pristine and patched trees. Not committed. |
 
@@ -71,18 +73,23 @@ copy of upstream and runs each witness against both trees.
 
 The patch sequence currently holds one patch.
 
-To set up a machine from nothing and check everything, including the
-proofs:
+To check everything, including the proofs, on a machine that has only git
+and Podman:
 
 ```
-tools/bootstrap.sh
-opam exec --switch=fvzlib -- make full
+git submodule update --init
+tools/in-container.sh make full
 ```
+
+The first run builds the toolchain container. That took about fifteen
+minutes on a 16-core machine and will take longer on a smaller one. See [The build environment](#the-build-environment-a-container)
+and [docs/moving-to-linux.md](docs/moving-to-linux.md).
 
 `make full` refuses to pass anywhere but x86-64 Linux, the project's first
-target. On another machine, `make full EXPLORATORY=1` runs the same checks
-and labels the result exploratory. See
-[docs/moving-to-linux.md](docs/moving-to-linux.md).
+target. Without a container, `tools/bootstrap.sh` installs the toolchain
+into an opam switch on the machine itself, and on a machine that is not the
+target `make full EXPLORATORY=1` runs the same checks and labels the result
+exploratory.
 
 ## Guiding principles
 
@@ -366,7 +373,8 @@ Decided 2026-11-24.
 | OCaml | 4.14.3 |
 
 All are installed from opam, using the default repository and the
-`coq-released` repository. The same versions are used on every machine.
+`coq-released` repository. The same versions are used on every machine. In
+the toolchain container both repositories are fixed at one commit each.
 `env/packages.lock` pins every opam package in the switch, 23 in all, and
 `tools/check_env.py` compares an installation with it.
 
@@ -391,8 +399,13 @@ version and source hash, never by the output of `ccomp -version`.
 Checked on an ARM Mac with these versions: a small C function was translated,
 a VST contract for it was proven, and the assumption list was the standard
 classical set. All fifteen library source files of zlib 1.4 were translated
-by the CompCert front end, with the ARM CRC path disabled. Both checks must
-be repeated on the x86-64 Linux target.
+by the CompCert front end, with the ARM CRC path disabled.
+
+Repeated on the x86-64 Linux target on 2026-11-25. Every proof for
+`adler32.c` passes there, and each rests on VST's standard axioms only. The
+CompCert front
+end translates all fifteen library source files, under the flags in
+`proofs/zlib.mk`, with no warnings and nothing disabled.
 
 ### Policy on undefined, implementation-defined, and unspecified behavior
 
@@ -562,14 +575,17 @@ Why:
 - x86-64 Linux is the most widely deployed platform for upstream zlib, and no
   code path on it uses assembly.
 - CompCert's front end, at versions 3.16 and 3.18, translated all fifteen
-  library source files of 1.4 in this configuration. The check was run on an ARM Mac
-  with the ARM CRC path disabled, so it must be repeated on the real target.
+  library source files of 1.4 in this configuration. The check was first
+  run on an ARM Mac with the ARM CRC path disabled. Version 3.18 repeated it
+  on the real target on 2026-11-25, with nothing disabled.
 
 Consequences:
 
 - **The work moves to an x86-64 Linux machine** before proof work begins. The
   toolchain is installed there for the x86-64 Linux target, and the Clight
-  syntax trees are generated against that machine's system headers.
+  syntax trees are generated against that machine's system headers. Done on
+  2026-11-25, in a container. See
+  [The build environment](#the-build-environment-a-container).
 - **"Proven equals built" has real work to do.** CompCert reports the 1999
   standard version and current gcc reports a later one. zlib tests that value
   in three headers. In the default configuration the affected code appears
@@ -699,8 +715,8 @@ Why:
 What we measured: all fifteen library files of zlib 1.4 were preprocessed
 under the 1989, 1999, 2011, 2017, and 2023 editions, and zlib's own code was
 compared. Twelve files are identical under every edition, including all of
-inflate, deflate, and both checksums. The check was run on an ARM Mac and
-must be repeated on the real target.
+inflate, deflate, and both checksums. The check was first run on an ARM
+Mac.
 
 | File | What changes with the edition |
 |---|---|
@@ -708,9 +724,36 @@ must be repeated on the real target.
 | `gzlib.c` | Unbounded string formatting under 1989, bounded formatting from 1999 on |
 | `gzwrite.c` | The formatted-output code is built differently under 1989, and one variadic macro call differs under 2023 |
 
+Repeated on the real target on 2026-11-25, in the toolchain container, with
+gcc 15.2 and glibc 2.43. Each file was preprocessed with the upstream
+build's own command under each edition, and the tokens from zlib's files
+were compared. Eleven files are identical under every edition, not twelve.
+The three files above differ as they did on the Mac. One more file differs
+on Linux:
+
+| File | What changes with the edition on Linux |
+|---|---|
+| `gzread.c` | Under 2023, the C library defines `memchr` as a macro that selects on the type of its argument. The one call, in `gzgets`, expands to a `_Generic` expression. |
+
+Two further observations from that run:
+
+- **The 2023 difference in `gzwrite.c` is in `va_start`.** It expands to a
+  different compiler built-in under 2023.
+- **`gzlib.c` also depends on the dialect, not only the edition.** Under
+  gcc's GNU dialects, which are its default, the code for the `e` mode
+  flag of `gzopen` is compiled. Under the strict ISO dialects it is not,
+  because the C library then hides `O_CLOEXEC`.
+
+The script for this check is not in the repository yet.
+
 Consequences:
 
-- One proof covers each of the twelve identical files under every edition.
+- One proof covers each of the eleven identical files under every edition.
+- **The default build of `gzread.c` on the first target contains a
+  `_Generic` expression that the verifier never sees.** gcc 15 compiles
+  under the 2023 edition by default, and CompCert preprocesses under 1999.
+  The build check will report the difference when `gzread.c` is verified,
+  and it must be resolved then.
 - The 1989 build of the file layer uses unbounded formatting. It is a
   distinct and weaker configuration, to be placed in a late matrix cell or
   excluded with a stated reason.
@@ -963,11 +1006,80 @@ Consequences:
   transfer, neither of which exists yet. The contract transfer spike comes
   before the contracts are written and proven in full.
 
+### The build environment: a container
+
+Decided 2026-11-25. Built and used the same day, on one machine.
+
+Every check and proof for the first target runs inside a container. One
+file, `env/Containerfile`, defines the image. One script,
+`tools/in-container.sh`, builds the image when needed and runs a command in
+it. The repository is mounted into the container, not copied, so the image
+holds the toolchain only.
+
+What the image is made from:
+
+| Part | Pinned by |
+|---|---|
+| Base system, Ubuntu 26.04 | The digest of the base image |
+| System packages: gcc, the C library headers, GMP, opam, and the rest | The date of one snapshot of the Ubuntu archive |
+| The build recipe of each opam package | One commit of each of the two opam repositories |
+| The version of each opam package | `env/packages.lock`, as before |
+
+Why:
+
+- **Others can replicate the result.** Anyone with Podman gets the same
+  toolchain with one command. Nothing else is installed on their machine.
+- **System packages are now pinned.** The verifier reads source that the
+  system C compiler has preprocessed against the system headers. Until now
+  those were whatever the machine had.
+- **Build recipes are now pinned.** Until now a package's recipe could
+  change under the same version number.
+- **The image can become the archived environment** that the
+  reproducibility objective asks for.
+
+Consequences:
+
+- **The base image is part of the first target.** The upstream `./configure`
+  runs against the image's compiler and headers. In Ubuntu 26.04 that is gcc
+  15 and glibc 2.43. gcc 15 compiles under the 2023 edition of C by default,
+  so the source "as built" in this cell is the 2023 edition's. CompCert
+  preprocesses under the 1999 edition. `adler32.c` is the same under every
+  edition. `gzread.c` and `gzwrite.c` each have one call that differs under
+  the 2023 edition, as measured under
+  [C standard editions](#c-standard-editions). The build check is expected
+  to report each when its file is verified.
+- **Results for the first target are those from the container.** A toolchain
+  that `tools/bootstrap.sh` installs directly on a machine still works. Its
+  system packages and build recipes are not pinned, so its results are a
+  convenience, not the record.
+- **Podman without root is the supported runtime.** The image file is a
+  standard one that Docker should also build, but the script is written for
+  Podman and nothing has been tried with Docker.
+
+Limits:
+
+- **Building the image depends on outside services**: the image registry,
+  the Ubuntu snapshot service, GitHub, and the sites that opam downloads
+  source archives from. opam checks each archive against a checksum.
+- **Two builds give the same versions, not the same bytes.** Compilers
+  record times and paths in their output.
+- **The image has been built once, on one machine.** A build on a second
+  machine is the real test that others can replicate it.
+- **The built image is not published.** A published copy, named by digest,
+  would remove both limits above. It would also redistribute CompCert, so
+  the terms of CompCert's license must be checked first.
+
+Alternatives rejected: installing the toolchain directly on the Linux
+machine, which was the plan until now. It pins less, and it ties the result
+to one laptop. Nix or Guix, which pin more strictly. They would be a second
+packaging of a toolchain that opam already packages, and fewer people can
+run them.
+
 ## Milestones
 
 ### Milestone 1: Adler-32, end to end
 
-Decided 2026-11-23. Not started.
+Decided 2026-11-23. Under way.
 
 Take one whole source file, `adler32.c`, through every stage of the method.
 The file has five short functions, loops over a byte buffer, and no goto.
@@ -1085,6 +1197,38 @@ Progress as of 2026-11-24:
   not cover declarations from system headers. The run that counts is the
   one on the Linux machine, where `./configure` makes different choices.
 
+Progress on 2026-11-25, the move to the first target:
+
+- **Criterion 1, met on one machine.** The toolchain container builds from
+  `env/Containerfile`, and `tools/in-container.sh make full` passes in it
+  from a clean tree, in about three and a half minutes. The container pins
+  the system packages and the opam build recipes as well as the opam
+  package versions. It has been built once, on one host.
+- **Criterion 2, met for `adler32.c`.** The flags in `proofs/zlib.mk`
+  predicted the choices of `./configure` on Linux correctly. The source as
+  built and the source as verified agree over 2655 tokens, for the static
+  and the shared library, apart from one accepted difference. The accepted
+  difference is the symbol visibility attribute on two declarations.
+  CompCert undefines `__GNUC__` when it preprocesses, and the C library
+  then defines `__attribute__` away. The entry is in
+  `env/build-check-allow.toml` with its reason. As before, the comparison
+  does not cover declarations from system headers.
+- **Criterion 5, carried over.** Every proof for `adler32.c` passes on the
+  target. Each prints the same six axioms, which are VST's standard set. No
+  proof script changed.
+- **One repair to files that pin a syntax tree.** The guarded combine proof
+  and the ticked spike each listed CompCert's built-in functions by name,
+  and three of those exist only on ARM. The lists now name only the
+  identifiers of the source file, so they no longer depend on the target.
+  The computed syntax trees did not need regenerating.
+- **Both spikes pass on the target.**
+- **The F0001 witness is repeated on the target.** Built with gcc 15.2, it
+  is killed by signal 11 on the pristine tree and exits with status 0 on
+  the patched one.
+- **Still measured only on the development machine:** the comparison of the
+  test vectors with a real zlib, the census counts for the whole core, and
+  the timings in the F0001 ledger entry.
+
 ### Milestone 2: the inflate reference model
 
 Planned, not yet specified in detail.
@@ -1133,7 +1277,7 @@ Listed roughly in order of consequence.
 
 ## Planned spikes
 
-Small experiments that inform decisions above. None has been run.
+Small experiments that inform decisions above. Two have been run.
 
 - **Contract transfer.** Done on 2026-11-24. See
   [spikes/transfer/README.md](spikes/transfer/README.md). A VST contract

@@ -1,0 +1,107 @@
+# The fvzlib toolchain image: x86-64 Linux with the pinned toolchain.
+#
+# Build and use it through tools/in-container.sh.  The repository is not
+# copied into the image.  It is mounted at /fvzlib when a command runs, so
+# the image holds the toolchain only and changes only when a pin changes.
+#
+# Everything the image is made from is pinned in this file or in
+# env/packages.lock:
+#
+#   base image        by digest, in the FROM line
+#   system packages   by the date of the Ubuntu archive snapshot
+#   opam recipes      by the commit of each opam repository
+#   opam packages     by version, in env/packages.lock
+#
+# To move a pin, change it here and run tools/in-container.sh again.  The
+# image is rebuilt, which takes from fifteen minutes to an hour.
+
+# Ubuntu 26.04 for linux/amd64 and others.  The digest names the multi-
+# platform index that the tag 26.04 pointed to on 2026-11-25.
+FROM docker.io/library/ubuntu:26.04@sha256:d66b366dac61b575bee2aef07e9c26e8070096fbe84a3d4d3eb0da069b5d76db
+
+# The state of the Ubuntu archive that system packages are taken from.
+ARG APT_SNAPSHOT=20261125T000000Z
+
+# The opam repositories, each at one commit.  The second is the source of
+# https://coq.inria.fr/opam/released, in its directory `released`.
+ARG OPAM_REPOSITORY_URL=https://github.com/ocaml/opam-repository.git
+ARG OPAM_REPOSITORY_COMMIT=a305f52d0c9f1a98fb88f5fa4c4d2583ddbdbf0b
+ARG ROCQ_REPOSITORY_URL=https://github.com/rocq-prover/opam.git
+ARG ROCQ_REPOSITORY_COMMIT=a00a8b17cf0531a6bf24ef59d8c4db7f018ad11e
+
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
+
+# ---- system packages, from the snapshot only --------------------------------
+#
+# The snapshot service speaks HTTPS only, and the base image has no
+# certificates.  So the certificates package itself is fetched without
+# checking the server's certificate.  That is sound: apt checks every package
+# against the archive's signed index, whoever served it.  Everything after
+# that is fetched with the certificate checked.
+RUN printf '%s\n' \
+      'Types: deb' \
+      "URIs: https://snapshot.ubuntu.com/ubuntu/${APT_SNAPSHOT}/" \
+      'Suites: resolute resolute-updates resolute-security' \
+      'Components: main universe' \
+      'Check-Valid-Until: no' \
+      'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \
+      > /etc/apt/sources.list.d/ubuntu.sources \
+ && apt-get -o Acquire::https::Verify-Peer=false -o Acquire::https::Verify-Host=false update \
+ && apt-get -o Acquire::https::Verify-Peer=false -o Acquire::https::Verify-Host=false \
+      install --yes --no-install-recommends ca-certificates \
+ && apt-get update \
+ && apt-get dist-upgrade --yes --no-install-recommends \
+ && apt-get install --yes --no-install-recommends \
+      opam git make gcc libc6-dev m4 patch python3 pkg-config libgmp-dev \
+      curl unzip bzip2 xz-utils rsync \
+ && rm -rf /var/lib/apt/lists/*
+
+# ---- the opam repositories, each at its pinned commit -----------------------
+RUN set -eu; \
+    fetch() { \
+      git init --quiet "$1"; \
+      git -C "$1" fetch --quiet --depth 1 "$2" "$3"; \
+      git -C "$1" checkout --quiet FETCH_HEAD; \
+      test "$(git -C "$1" rev-parse HEAD)" = "$3"; \
+      rm -rf "$1/.git"; \
+    }; \
+    fetch /opt/opam-repository "$OPAM_REPOSITORY_URL" "$OPAM_REPOSITORY_COMMIT"; \
+    fetch /opt/rocq-opam "$ROCQ_REPOSITORY_URL" "$ROCQ_REPOSITORY_COMMIT"; \
+    test -f /opt/opam-repository/repo; \
+    test -f /opt/rocq-opam/released/repo
+
+# ---- the toolchain, as an ordinary user -------------------------------------
+#
+# The base image's user `ubuntu` has user and group number 1000.
+# tools/in-container.sh maps whoever runs it to that user.
+USER ubuntu
+ENV HOME=/home/ubuntu
+WORKDIR /home/ubuntu
+
+# opam's own sandbox needs privileges that a container does not have, so it
+# is turned off.  The container is the sandbox.
+RUN opam init --bare --no-setup --disable-sandboxing --yes \
+      default /opt/opam-repository \
+ && opam repository add coq-released /opt/rocq-opam/released \
+      --all-switches --set-default --yes
+
+# The same script that installs the toolchain outside a container.
+COPY --chown=ubuntu:ubuntu env/packages.lock  /home/ubuntu/pins/env/packages.lock
+COPY --chown=ubuntu:ubuntu tools/bootstrap.sh /home/ubuntu/pins/tools/bootstrap.sh
+RUN sh /home/ubuntu/pins/tools/bootstrap.sh --toolchain-only \
+ && opam clean --all-switches --download-cache --logs --repo-cache --yes
+
+# A record of the pins, which tools/check_env.py copies into its report.
+USER root
+RUN printf '%s\n' \
+      'base image: ubuntu:26.04@sha256:d66b366dac61b575bee2aef07e9c26e8070096fbe84a3d4d3eb0da069b5d76db' \
+      "system packages: Ubuntu archive snapshot ${APT_SNAPSHOT}" \
+      "opam-repository: commit ${OPAM_REPOSITORY_COMMIT}" \
+      "rocq opam repository: commit ${ROCQ_REPOSITORY_COMMIT}" \
+      > /etc/fvzlib-toolchain
+USER ubuntu
+
+# Every command runs inside the pinned switch, in the mounted repository.
+WORKDIR /fvzlib
+ENTRYPOINT ["opam", "exec", "--switch=fvzlib", "--"]
+CMD ["bash"]
