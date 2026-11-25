@@ -51,6 +51,7 @@ been built once, on one machine.
 | `docs/moving-to-linux.md` | How to run the work on x86-64 Linux, and what the move found |
 | `spikes/` | Exploratory experiments, each with its own README. Not part of the main build. |
 | `build/` | Generated. Holds the pristine and patched trees. Not committed. |
+| `.github/workflows/` | Continuous integration. `full.yml` runs `tools/in-container.sh make full` on a fresh machine. |
 
 In `spec/`, a file named after a topic holds definitions only and is trusted
 reading. Its `Facts` and `Tests` companions hold evidence and need not be
@@ -1273,7 +1274,12 @@ F*.
 Listed roughly in order of consequence.
 
 1. **Repository layout and CI.** A provisional layout is in use, described
-   under [What is in the repository](#what-is-in-the-repository).
+   under [What is in the repository](#what-is-in-the-repository). A CI
+   workflow, `.github/workflows/full.yml`, was written on 2026-11-25. On
+   every push to `main` and every pull request it builds the toolchain
+   container, or takes it from a cache, and runs `make full` in it. Its
+   steps were rehearsed by hand from a fresh clone. The workflow itself has
+   not run yet.
 
 ## Planned spikes
 

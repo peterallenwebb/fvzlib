@@ -1,0 +1,89 @@
+# Check everything on a fresh machine, in the toolchain container.
+#
+# The job runs the command a person runs: tools/in-container.sh make full.
+# It builds the toolchain image from env/Containerfile, which takes a long
+# time, and then keeps the built image in this repository's cache.  The cache
+# key is a hash of the files that define the image, so a changed pin builds a
+# new image.  GitHub drops a cache entry that has not been used for a week.
+# The next run then builds the image again, which is a fresh test that it
+# still can be built.
+#
+# Each action is named by the commit of a release, not by a tag that can
+# move.
+
+name: full
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full:
+    name: make full, in the toolchain container
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Get the repository and the pinned zlib
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+
+      # IMAGE_FILE is where the built image is kept between steps.
+      - name: Record the host
+        run: |
+          uname -srm
+          echo "processors: $(nproc)"
+          podman --version
+          echo "IMAGE_FILE=$RUNNER_TEMP/fvzlib-toolchain.tar" >> "$GITHUB_ENV"
+
+      - name: Look for a built toolchain image in the cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.IMAGE_FILE }}
+          key: toolchain-image-${{ hashFiles('env/Containerfile', 'env/packages.lock', 'tools/bootstrap.sh') }}
+
+      - name: Load the image from the cache
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: podman load --input "$IMAGE_FILE"
+
+      # Does nothing when the image was loaded from the cache.
+      - name: Build the toolchain image
+        run: tools/in-container.sh --build
+
+      - name: Write the built image to a file
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: podman save --output "$IMAGE_FILE" "$(tools/in-container.sh --build)"
+
+      # Saved before the checks run, so a failing check does not cost a
+      # rebuild of the image.
+      - name: Put the built image in the cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.IMAGE_FILE }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Check everything
+        run: tools/in-container.sh make full
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports
+          path: |
+            build/environment.txt
+            build/build-check.txt
+            build/configure.log
+          if-no-files-found: warn
