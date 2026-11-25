@@ -25,5 +25,3 @@ Proof.
   forward_call (adler, len).
   Intros r. forward. Exists r. entailer!.
 Qed.
-
-Print Assumptions body_adler32_buffer.

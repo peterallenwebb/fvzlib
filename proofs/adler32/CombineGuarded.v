@@ -197,5 +197,3 @@ Proof.
   (* entailer! has already replaced v1 and v2 by what they stand for *)
   apply combine_spec_from_values. lia.
 Qed.
-
-Print Assumptions body_combine_internal_guarded.

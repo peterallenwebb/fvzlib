@@ -44,5 +44,3 @@ Lemma toy_tail :
                      (Etempvar _steps tuint))
             (Sreturn (Some (Etempvar _n tuint)))).
 Proof. reflexivity. Qed.
-
-Print Assumptions toy_goto_target.

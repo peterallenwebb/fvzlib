@@ -86,7 +86,7 @@ Ltac do1 bs := load_byte; forward; forward; track bs.
 (** ** The null buffer *)
 
 Lemma body_adler32_z_null :
-  semax_body Vprog [adler32_z_null_spec] f_adler32_z adler32_z_null_spec.
+  semax_body Vprog [] f_adler32_z adler32_z_null_spec.
 Proof.
   start_function.
   forward. forward.
@@ -100,7 +100,7 @@ Qed.
 (** ** A non-empty buffer *)
 
 Lemma body_adler32_z_buffer :
-  semax_body Vprog [adler32_z_buffer_spec] f_adler32_z adler32_z_buffer_spec.
+  semax_body Vprog [] f_adler32_z adler32_z_buffer_spec.
 Proof.
   start_function.
   pose proof (bytes_of_all_bytes bs) as Hbytes.
@@ -505,6 +505,3 @@ Proof.
       pose proof (update_from_reduced adler (bytes_of bs) ltac:(lia)) as U.
       cbv zeta in U. rewrite Hlen in U. exact U.
 Qed.
-
-Print Assumptions body_adler32_z_null.
-Print Assumptions body_adler32_z_buffer.

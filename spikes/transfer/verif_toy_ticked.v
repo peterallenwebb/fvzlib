@@ -115,5 +115,3 @@ Proof.
     Exists (n0 + 2).
     rewrite stop_at_miss by lia. rewrite Z.sub_0_r. entailer!; fin.
 Qed.
-
-Print Assumptions body_count_down_ticked.

@@ -1,0 +1,44 @@
+# The axioms that the proofs of C contracts may depend on.
+#
+# tools/check_axioms.py reads this file.  It fails if a proof depends on an
+# axiom that is not listed here, or on one listed here under a different
+# statement.  An admitted lemma counts as an axiom, so none is allowed.
+#
+# Entries are separated by blank lines.  Each is written as Rocq prints it:
+# a name, a colon, and the statement.  Lines starting with # are comments.
+#
+# All six are assumed by the tools we build on, not by this project.  They
+# are the standard classical set that VST 2.17 and CompCert 3.18 rest on.
+# The specification layers, in spec/, depend on none of them.  audit/*.v
+# and tools/check_assumptions.py check that.
+#
+# Adding an entry widens what every proof is trusted on.  Treat it as a
+# change to the headline claim.
+
+# Excluded middle.  Rocq standard library, Stdlib.Logic.Classical_Prop.
+Classical_Prop.classic : forall P : Prop, P \/ ~ P
+
+# Functions that agree on every argument are equal.  Rocq standard library,
+# Stdlib.Logic.FunctionalExtensionality.
+FunctionalExtensionality.functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+
+# Propositions that imply each other are equal.  Declared by VST, in
+# VST.msl.Axioms.  The statement is the standard library's.
+Axioms.prop_ext : ClassicalFacts.prop_extensionality
+
+# Sets with the same members are equal.  Rocq standard library,
+# Stdlib.Sets.Ensembles.
+Ensembles.Extensionality_Ensembles :
+  forall (U : Type) (A B : Ensembles.Ensemble U),
+  Ensembles.Same_set A B -> A = B
+
+# Two axioms behind the standard library's classical real numbers,
+# Stdlib.Reals.ClassicalDedekindReals.
+ClassicalDedekindReals.sig_not_dec : forall P : Prop, {~ ~ P} + {~ P}
+
+ClassicalDedekindReals.sig_forall_dec :
+  forall P : nat -> Prop,
+  (forall n : nat, {P n} + {~ P n}) ->
+  {n : nat | ~ P n} + {forall n : nat, P n}

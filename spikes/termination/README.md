@@ -13,7 +13,7 @@ terminates?
 
 ## What was proven
 
-All three results are VST contracts for instrumented code and rest on VST's
+All the results are VST contracts for instrumented code and rest on VST's
 standard axioms only.
 
 | Function | Code | Contract |
@@ -21,6 +21,12 @@ standard axioms only.
 | `adler32_z` | The real function of patched zlib 1.4, with ticks added | Memory safe, buffer untouched, and at most `len/5552 + len/16 + 19` ticks |
 | `adler32` | The real function, with ticks added | At most one tick more than `adler32_z` |
 | `twice` | A small client that calls `adler32_z` twice and sets the counter before each call | Needs no tick budget from its own caller |
+| Internal combine function | The real function, with ticks added | Memory safe and at most 1 tick, for any arguments |
+| `adler32_combine`, `adler32_combine64` | The real functions, with ticks added | Memory safe and at most 2 ticks, for any arguments |
+
+The combine functions were added on 2026-11-25. They have no loop, so each
+costs one tick for each function entered. The bound of 2 is the one the
+Layer 3 design note proposed.
 
 The instrumentation was applied to all five functions of `adler32.c`.
 Erasing the ticks gives back the original function bodies exactly, which the

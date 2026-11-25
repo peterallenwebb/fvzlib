@@ -15,6 +15,18 @@ The functions proven are the real ones from the patched tree, with no
 instrumentation and no transformation. `adler32.c` contains no goto, so the
 contracts attach directly to the code that ships.
 
+Each function has one contract, covering every call the manual allows.
+
+| Function | Contract | Proven |
+|---|---|---|
+| `adler32_z` | `adler32_z_contract`, in `Contract.v` | Memory safe, the caller's memory unchanged, result below 2^32, and result satisfies the Layer 2 specification. For a null buffer of any length, or a run of bytes of any length, including zero, inside a non-empty array the caller owns. Any 64-bit checksum argument. |
+| `adler32` | `adler32_contract`, in `Contract.v` | The same, with a 32-bit length |
+| `adler32_combine` | `adler32_combine_funspec`, in `Combine.v` | Result satisfies the Layer 2 specification, for any two 64-bit arguments and any 64-bit signed length |
+| `adler32_combine64` | `adler32_combine64_funspec`, in `Combine.v` | The same |
+
+The contracts of `adler32_z` and `adler32` are derived from three narrower
+contracts for each, which are what the proofs about the C code establish:
+
 | Function | Case | Proven |
 |---|---|---|
 | `adler32_z` | Null buffer, any length | Returns a value satisfying the Layer 2 specification, which is the initial value 1 |
@@ -36,7 +48,34 @@ result is the Adler-32 checksum of those bytes followed by the buffer, as RFC
 are the checksums of two byte sequences and the length is that of the
 second, the result is the checksum of the two sequences joined.
 
-All nine proofs rest on VST's standard axioms only.
+Every proof rests on VST's standard axioms only. The build checks that:
+`AxiomAudit.v` prints what each result depends on, and
+`tools/check_axioms.py` requires every axiom printed to be one of the six in
+`audit/allowed-axioms.txt`.
+
+## One contract per function
+
+`Contract.v` holds the contract a caller should use. It describes the buffer
+argument as either null, or a run of bytes inside an array the caller owns,
+with the bytes before and after the run named. The run may be empty. The
+array may not be.
+
+`ContractProof.v` does not prove that contract against the C code a second
+time. For any one call, the contract follows from one of the three narrower
+contracts, and which one depends on the buffer argument. VST's rule for
+replacing a contract by one it implies gives the result for that call. A
+small lemma, `semax_body_pointwise`, collects the calls into one contract.
+
+Three things to know about it:
+
+- **It covers a call that none of the three covers directly**: a non-empty
+  run of bytes inside a larger array. That follows from the contract for a
+  non-empty buffer, because the rest of the array is not touched.
+- **Nothing was lost.** Each of the six narrower contracts is proven to
+  follow from the single contract of its function.
+- **The three proofs about `adler32_z` are now stated with no assumptions
+  about other functions.** The function calls none, and the derivation needs
+  the three to share one context.
 
 ## The buffer of length zero
 
@@ -68,13 +107,12 @@ a comparison, so VST cannot prove anything about that call.
 - **A 32-bit range for the combine functions.** Their contract does not
   promise that the result fits in 32 bits. For arguments that are not
   checksums it need not, and the manual promises nothing for those.
-- **Cost.** These contracts have no cost clause. Cost bounds for `adler32_z`
-  and `adler32` are proven separately, for instrumented code, in
-  `spikes/termination`.
-- **One contract per function.** `adler32_z` and `adler32` each have three
-  contracts here, one for each case. They are not yet combined into a single
-  contract. The non-empty contract also still describes the buffer as a
-  whole array, not as a run of bytes inside a larger one.
+- **Cost.** These contracts have no cost clause. Cost bounds for all five
+  functions are proven separately, for instrumented code, in
+  `spikes/termination`. The design calls for each contract to exist in two
+  forms from one definition, with and without ticks. That is not built.
+- **Linking.** The contracts are proven function by function. They are not
+  yet assembled into one statement about the whole file.
 - **The rest of the gap VST leaves.** The arithmetic VST does not check is
   listed and dealt with below. Aliasing, pointer arithmetic that leaves an
   object, and evaluation order are not addressed.
@@ -117,10 +155,13 @@ at the null pointer. That is finding F0001, seen from the proof's side.
 | `Bridge.v` | What each machine operation the code uses does, in terms of mathematical integers. |
 | `Steps.v` | One unrolled step of the C loop, in terms of the model. |
 | `Buffer.v` | Splitting and rejoining a byte buffer at a moving pointer. |
-| `Spec.v` | The contracts. |
+| `Spec.v` | The narrower contracts for a null and for a non-empty buffer. |
 | `Verif.v` | The proofs for `adler32_z`. |
 | `VerifWrapper.v` | The proofs for `adler32`. |
 | `EmptyBuffer.v` | The contracts and proofs for a buffer of length zero. |
+| `Contract.v` | The single contract of `adler32_z` and of `adler32`. Definitions only. |
+| `ContractProof.v` | The derivation of those contracts from the narrower ones, and the proofs that the narrower ones follow from them. |
+| `AxiomAudit.v` | Every proven result, with what it depends on printed for the axiom check. |
 | `Combine.v` | The contracts and proofs for the combine functions. |
 | `CensusAdler32.v` | The census for this file, pinned as checked statements. |
 | `CombineGuarded.v` | The proof that closes the one open census item. |

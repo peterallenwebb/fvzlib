@@ -85,5 +85,3 @@ Proof.
     forward. forward.
     rewrite stop_at_miss by lia. rewrite Z.sub_0_r. entailer!; arith.
 Qed.
-
-Print Assumptions body_count_down_nogoto.

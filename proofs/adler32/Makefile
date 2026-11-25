@@ -1,7 +1,8 @@
 # Proofs of the Adler-32 C contracts.  Needs the pinned toolchain,
 # including VST, and the Rocq sources of the specification layers built.
 #
-#   make        translate the patched adler32.c and check every proof
+#   make        translate the patched adler32.c, check every proof, and
+#               check that the proofs rest on allowed axioms only
 #   make clean  remove build products
 #
 # Run `make check` at the top of the repository first.  It builds the
@@ -19,12 +20,14 @@ FLAGS   := -Q . fvzlib.proofs.adler32 -Q $(ROOT)/proofs/lib fvzlib.proofs.lib \
 include $(ROOT)/proofs/zlib.mk
 DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper \
-           EmptyBuffer Combine CensusAdler32 CombineGuarded
+           EmptyBuffer Contract ContractProof Combine CensusAdler32 \
+           CombineGuarded
 
 .PHONY: all clean
 all: adler32_clight.v
 	$(MAKE) -C $(ROOT)/proofs/lib
 	for f in $(FILES); do rocq compile $(FLAGS) $$f.v || exit 1; done
+	python3 $(ROOT)/tools/check_axioms.py --flags '$(FLAGS)' .
 
 adler32_clight.v: $(PATCHED)/adler32.c
 	clightgen -normalize -I $(PATCHED) $(DEFINES) $(PATCHED)/adler32.c \

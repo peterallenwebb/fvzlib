@@ -1,9 +1,11 @@
 (** * Adler-32: C contracts (Layer 3)
 
     Contracts for [adler32_z] of patched zlib 1.4, stated against the
-    Layer 2 specification.  They follow the adopted Layer 3 design, with two
-    simplifications for now: the buffer is either null or non-empty, and the
-    contracts carry no cost clause.
+    Layer 2 specification, for two kinds of buffer argument: null, and
+    non-empty.  [EmptyBuffer.v] adds a third, a non-null buffer of length
+    zero.  These narrower contracts are what the C proofs establish.  The
+    contract a caller should use is the single one in [Contract.v], which
+    [ContractProof.v] derives from these.  None carries a cost clause.
 
     A contract here says three things about a call: it is memory safe, it
     leaves the buffer as it found it, and the value it returns satisfies the

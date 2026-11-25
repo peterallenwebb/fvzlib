@@ -166,5 +166,3 @@ Proof.
   forward.
   Exists r2. unfold ticks. entailer!.
 Qed.
-
-Print Assumptions body_adler32_cost.

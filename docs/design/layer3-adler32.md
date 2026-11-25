@@ -1,10 +1,18 @@
 # Layer 3 design: contracts for the Adler-32 functions
 
-Status: design adopted on 2026-11-24. The contracts below are a draft. They
-type-check in VST 2.17 against the patched `adler32.c`, translated on an ARM
-Mac. They are not built by this repository yet, and nothing has been proven
-against them. They are to be rebuilt on the x86-64 Linux target, where the C
-types happen to be the same.
+Status: design adopted on 2026-11-24. Built in part on 2026-11-25, on the
+x86-64 Linux target.
+
+- **Built and proven:** the contracts of `adler32_z` and `adler32` in the
+  form without ticks, with the buffer argument described below. They are in
+  `proofs/adler32/Contract.v`, under the names `adler32_z_contract` and
+  `adler32_contract`, and proven in `ContractProof.v`.
+- **Proven in the termination spike:** the cost bounds in the table below,
+  for instrumented code.
+- **Not built:** the form with ticks of each contract, and the generation
+  of both forms from one definition. The draft at the end of this note is
+  that form with ticks. It is kept as written on 2026-11-24, and nothing
+  has been proven against it.
 
 The decision itself is recorded in the README under "Layer 3 contracts".
 
@@ -37,7 +45,7 @@ predicate-valued parameter, with a universe inconsistency. The run-in-an-array
 form avoids that.
 
 A simpler corollary contract for a plain non-empty buffer, with nothing
-before or after, is to be derived from the general one.
+before or after, is derived from the general one in `ContractProof.v`.
 
 ## Cost bounds
 
@@ -48,7 +56,7 @@ condition, including the final test that fails.
 |---|---|---|
 | `adler32_z` | len/5552 + len/16 + 19 | Proven for the instrumented code in the termination spike, for a non-null, non-empty buffer |
 | `adler32` | one more than `adler32_z` | Proven in the same spike |
-| `adler32_combine`, `adler32_combine64` | 2 | Proposed, not proven |
+| `adler32_combine`, `adler32_combine64` | 2 | Proven for the instrumented code in the termination spike, for any arguments |
 
 An earlier version of this note proposed `1 + len/5552 + len/16 + 15` for
 `adler32_z`. That was three ticks too low, because it did not count the

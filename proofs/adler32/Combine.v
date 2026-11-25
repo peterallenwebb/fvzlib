@@ -259,6 +259,3 @@ Proof.
   forward_call (adler1, adler2, len2).
   Intros r. forward. Exists r. entailer!.
 Qed.
-
-Print Assumptions body_combine_internal.
-Print Assumptions body_adler32_combine.

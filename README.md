@@ -38,7 +38,7 @@ the container from nothing.
 |---|---|
 | `spec/format/` | Layer 1. Format specifications. Standard library only. |
 | `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
-| `audit/` | Lists of results that must depend on no axioms |
+| `audit/` | Lists of results that must depend on no axioms, and `allowed-axioms.txt`, the six axioms the C proofs may depend on |
 | `trace/` | Traceability from source sentences to definitions and theorems |
 | `ledger/` | Findings about zlib, and obligations not yet proven, one file each |
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
@@ -1182,7 +1182,7 @@ Progress as of 2026-11-24:
   The zero-length case uses the buffer description from the Layer 3
   decision: a position in a non-empty array the caller owns. Still to do:
   one combined contract per function, and cost bounds for the combine
-  functions.
+  functions. Both were done on 2026-11-25. See below.
 - **The arithmetic VST does not check, done for this file.** The census for
   `adler32.c` lists two items. One is closed by its constants and the other
   by a proof of the guarded function.
@@ -1217,7 +1217,8 @@ Progress on 2026-11-25, the move to the first target:
   build check, and the same axioms.
 - **Continuous integration runs.** `.github/workflows/full.yml` passed at
   its first run, on the commit that added it. That run built the image and
-  put it in the cache. No run has yet taken the image from the cache.
+  put it in the cache. The second run took the image from the cache and
+  passed in seven minutes.
 - **Criterion 2, met for `adler32.c`.** The flags in `proofs/zlib.mk`
   predicted the choices of `./configure` on Linux correctly. The source as
   built and the source as verified agree over 2655 tokens, for the static
@@ -1242,6 +1243,31 @@ Progress on 2026-11-25, the move to the first target:
 - **Still measured only on the development machine:** the comparison of the
   test vectors with a real zlib, the census counts for the whole core, and
   the timings in the F0001 ledger entry.
+- **The assumption list is now checked, not only printed.** Each directory
+  of C proofs has a file, `AxiomAudit.v`, that prints what every proven
+  result depends on. `tools/check_axioms.py` fails the build if a result
+  depends on an axiom outside the six in `audit/allowed-axioms.txt`, which
+  also catches an admitted lemma, or if a proof of a C contract is missing
+  from the file. Writing the check showed that two of the Adler-32 proofs
+  and one in a spike had never had their assumptions printed. All three
+  rest on the same six axioms.
+- **Criterion 4, one contract per function.** `adler32_z` and `adler32`
+  each have a single contract, in `proofs/adler32/Contract.v`, covering a
+  null buffer and a run of bytes of any length inside an array the caller
+  owns. It is derived from the three contracts already proven for the C
+  code, not proven against the code again. It also covers a non-empty run
+  inside a larger array, which none of the three covered. Each of the three
+  is proven to follow from it, so nothing was lost. These contracts have no
+  cost clause.
+- **Criterion 4, cost bounds for the combine functions.** Proven in the
+  termination spike, for instrumented code: at most 1 tick for the internal
+  function and at most 2 for `adler32_combine` and `adler32_combine64`,
+  for any arguments. Every function of `adler32.c` now has a proven cost
+  bound for its instrumented form. The bounds for `adler32_z` and `adler32`
+  still cover only a non-null, non-empty buffer.
+- **Still open under criterion 4:** the form with ticks of each contract,
+  generated from the same definition as the form without, and the review
+  of each precondition.
 
 ### Milestone 2: the inflate reference model
 
@@ -1291,10 +1317,11 @@ Listed roughly in order of consequence.
    workflow, `.github/workflows/full.yml`, was written on 2026-11-25. On
    every push to `main` and every pull request it builds the toolchain
    container, or takes it from a cache, and runs `make full` in it. Its
-   first run passed, in 37 minutes, of which 31 were the image build. The
-   objective that CI compares the assumption list against an allowed set
-   is met only for the results listed in `audit/`. The lists that the VST
-   proofs print are not compared yet.
+   first run passed, in 37 minutes, of which 31 were the image build. It
+   compares assumption lists against allowed sets in two ways. The results
+   listed in `audit/` must depend on no axioms. The C proofs and the
+   spikes must depend only on the six axioms in
+   `audit/allowed-axioms.txt`.
 
 ## Planned spikes
 

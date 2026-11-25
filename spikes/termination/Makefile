@@ -12,12 +12,14 @@ PATCHED := ../../build/zlib-patched
 FLAGS   := -Q . "" -Q ../transfer ""
 include ../../proofs/zlib.mk
 DEFINES := $(ZLIB_DEFINES)
-FILES   := adler32 adler32_ticked Buffer verif_adler32_z_cost verif_adler32_cost
+FILES   := adler32 adler32_ticked Buffer verif_adler32_z_cost verif_adler32_cost \
+           verif_combine_cost
 
 .PHONY: all clean
 all: adler32.v
 	$(MAKE) -C ../transfer
 	for f in $(FILES); do rocq compile $(FLAGS) $$f.v || exit 1; done
+	python3 ../../tools/check_axioms.py --flags '$(FLAGS)' .
 
 adler32.v: $(PATCHED)/adler32.c
 	clightgen -normalize -I $(PATCHED) $(DEFINES) $(PATCHED)/adler32.c -o adler32.v

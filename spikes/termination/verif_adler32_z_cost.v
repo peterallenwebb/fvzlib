@@ -469,5 +469,3 @@ Proof.
     + Intros a' s' u.
       return_using u.
 Qed.
-
-Print Assumptions body_adler32_z_cost.

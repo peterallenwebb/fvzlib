@@ -106,7 +106,7 @@ Opaque denote_tc_test_eq.
 (** ** Proofs *)
 
 Lemma body_adler32_z_empty :
-  semax_body Vprog [adler32_z_empty_spec] f_adler32_z adler32_z_empty_spec.
+  semax_body Vprog [] f_adler32_z adler32_z_empty_spec.
 Proof.
   start_function.
   pose proof (low16_range adler) as Hlow.
@@ -197,6 +197,3 @@ Proof.
   forward_call (adler, sh, before, after, arr).
   Intros r. forward. Exists r. entailer!.
 Qed.
-
-Print Assumptions body_adler32_z_empty.
-Print Assumptions body_adler32_empty.

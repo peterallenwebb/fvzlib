@@ -7,12 +7,14 @@
 # built for.  This spike is exploratory and is not part of `make check` at
 # the top of the repository.
 
+FLAGS := -Q . ""
 FILES := toy GotoElim toy_nogoto verif_toy_nogoto Ticks toy_ticked \
          verif_toy_ticked Transfer
 
 .PHONY: all clean
 all: toy.v
-	for f in $(FILES); do rocq compile -Q . "" $$f.v || exit 1; done
+	for f in $(FILES); do rocq compile $(FLAGS) $$f.v || exit 1; done
+	python3 ../../tools/check_axioms.py --flags '$(FLAGS)' .
 
 toy.v: toy.c
 	clightgen -normalize toy.c -o toy.v
