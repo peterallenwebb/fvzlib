@@ -1,7 +1,8 @@
 # Layer 3 design: contracts for the Adler-32 functions
 
 Status: design adopted on 2026-11-24. Built in part on 2026-11-25, on the
-x86-64 Linux target.
+x86-64 Linux target. The buffer argument was changed on 2026-11-26 by the
+review of preconditions: see "The buffer argument" below.
 
 - **Built and proven:** the contracts of `adler32_z` and `adler32` in the
   form without ticks, with the buffer argument described below. They are in
@@ -32,12 +33,25 @@ The decision itself is recorded in the README under "Layer 3 contracts".
 
 ## The buffer argument
 
-A non-null buffer is described as a run of bytes inside a readable array that
-the caller owns, with the bytes before and after the run named. The array as
-a whole must be non-empty. That makes the pointer valid even when the run is
-empty, which the code needs, because it compares the pointer with null and C
-defines that comparison only for a pointer that is null or points into, or
-one past, a live object.
+A non-null buffer is described as a run of bytes inside an array that the
+caller owns, with what the array holds before and after the run named. The
+array as a whole must be non-empty. That makes the pointer valid even when
+the run is empty, which the code needs, because it compares the pointer with
+null and C defines that comparison only for a pointer that is null or points
+into, or one past, a live object.
+
+As adopted, the design asked that the whole array be readable and hold
+initialized bytes. The review of preconditions on 2026-11-26 found that
+nothing needs either outside the run, and the contracts as built ask less:
+
+- **Only the run holds bytes.** What is before and after it is a list of
+  values, which may be uninitialized.
+- **Only a run that is not empty must be readable.** For an empty run the
+  caller needs some part in the ownership of the array and no more.
+
+The draft at the end of this note still has the form as adopted. The form
+as built is in `proofs/adler32/Contract.v`, and the review is in
+`audit/preconditions-adler32.toml`.
 
 An earlier draft let the caller pass an arbitrary separation-logic predicate
 as evidence of pointer validity. VST's ordinary contract form rejects a

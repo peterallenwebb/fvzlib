@@ -13,6 +13,10 @@
     the first byte to one past the last byte.  Nothing in the array is read,
     and the array is returned unchanged.
 
+    Because nothing is read, the contract asks nothing about what the array
+    holds, and does not ask for the right to read it.  The array may be
+    uninitialized, as a buffer is before the first read into it.
+
     The result is the checksum that was passed in, whenever that is a
     genuine running checksum.  That is what the Layer 2 specification says
     for no bytes. *)
@@ -24,41 +28,44 @@ From fvzlib.proofs.adler32 Require Import adler32_clight Bridge Model Spec Verif
 
 (** ** Contracts *)
 
-(** [before] and [after] are the bytes of the caller's array on either side
-    of the position passed.  Either may be empty, but not both. *)
+(** [before] and [after] are the contents of the caller's array on either
+    side of the position passed.  They are values and not bytes, so either
+    may hold uninitialized cells.  Either may be empty, but not both.  The
+    share [sh] is the caller's part in the ownership of the array.  It must
+    be some part, and need not be enough to read. *)
 Definition adler32_z_empty_spec : ident * funspec :=
  DECLARE _adler32_z
-  WITH adler : Z, sh : share, before : list byte, after : list byte, arr : val
+  WITH adler : Z, sh : share, before : list val, after : list val, arr : val
   PRE [ tulong, tptr tuchar, tulong ]
-    PROP (0 <= adler <= Int64.max_unsigned; readable_share sh;
+    PROP (0 <= adler <= Int64.max_unsigned; sepalg.nonidentity sh;
           0 < Zlength (before ++ after))
     PARAMS (Vlong (Int64.repr adler); offset_val (Zlength before) arr;
             Vlong (Int64.repr 0))
     SEP (data_at sh (tarray tuchar (Zlength (before ++ after)))
-                 (map Vubyte (before ++ after)) arr)
+                 (before ++ after) arr)
   POST [ tulong ]
     EX r : Z,
     PROP (adler32_spec adler (Some []) r; 0 <= r < 4294967296)
     RETURN (Vlong (Int64.repr r))
     SEP (data_at sh (tarray tuchar (Zlength (before ++ after)))
-                 (map Vubyte (before ++ after)) arr).
+                 (before ++ after) arr).
 
 Definition adler32_empty_spec : ident * funspec :=
  DECLARE _adler32
-  WITH adler : Z, sh : share, before : list byte, after : list byte, arr : val
+  WITH adler : Z, sh : share, before : list val, after : list val, arr : val
   PRE [ tulong, tptr tuchar, tuint ]
-    PROP (0 <= adler <= Int64.max_unsigned; readable_share sh;
+    PROP (0 <= adler <= Int64.max_unsigned; sepalg.nonidentity sh;
           0 < Zlength (before ++ after))
     PARAMS (Vlong (Int64.repr adler); offset_val (Zlength before) arr;
             Vint (Int.repr 0))
     SEP (data_at sh (tarray tuchar (Zlength (before ++ after)))
-                 (map Vubyte (before ++ after)) arr)
+                 (before ++ after) arr)
   POST [ tulong ]
     EX r : Z,
     PROP (adler32_spec adler (Some []) r; 0 <= r < 4294967296)
     RETURN (Vlong (Int64.repr r))
     SEP (data_at sh (tarray tuchar (Zlength (before ++ after)))
-                 (map Vubyte (before ++ after)) arr).
+                 (before ++ after) arr).
 
 (** ** Supporting facts *)
 
@@ -77,17 +84,15 @@ Qed.
 
 (** Every position in a non-empty array, including the one just past its
     end, may be compared with null. *)
-Lemma array_position_comparable sh (bs : list byte) (arr : val) (k : Z) :
-  readable_share sh -> 0 < Zlength bs -> 0 <= k <= Zlength bs ->
-  data_at sh (tarray tuchar (Zlength bs)) (map Vubyte bs) arr
+Lemma array_position_comparable sh (vs : list val) (arr : val) (k : Z) :
+  sepalg.nonidentity sh -> 0 < Zlength vs -> 0 <= k <= Zlength vs ->
+  data_at sh (tarray tuchar (Zlength vs)) vs arr
   |-- weak_valid_pointer (offset_val k arr).
 Proof.
   intros Hsh Hn Hk.
-  sep_apply (data_at_memory_block sh (tarray tuchar (Zlength bs))
-               (map Vubyte bs) arr).
+  sep_apply (data_at_memory_block sh (tarray tuchar (Zlength vs)) vs arr).
   simpl sizeof. rewrite Z.max_r by lia.
-  apply memory_block_weak_valid_pointer; [lia | lia |].
-  apply readable_nonidentity. assumption.
+  apply memory_block_weak_valid_pointer; [lia | lia | assumption].
 Qed.
 
 (** A pointer that may be compared with null passes VST's check on the
@@ -115,6 +120,8 @@ Proof.
   pose proof (Zlength_nonneg after) as Hafter.
   assert (Hk : 0 <= Zlength before <= Zlength (before ++ after))
     by (rewrite Zlength_app; lia).
+  assert (Hsh : sepalg.nonidentity sh) by assumption.
+  assert (Hn : 0 < Zlength (before ++ after)) by assumption.
   set (bs := before ++ after) in *.
   set (k := Zlength before) in *.
   forward. forward.
@@ -126,9 +133,9 @@ Proof.
      LOCAL (temp _adler (Vlong (Int64.repr (low16 adler)));
             temp _sum2 (Vlong (Int64.repr (high16 adler)));
             temp _buf (offset_val k arr); temp _len (Vlong (Int64.repr 0)))
-     SEP (data_at sh (tarray tuchar (Zlength bs)) (map Vubyte bs) arr)).
+     SEP (data_at sh (tarray tuchar (Zlength bs)) bs arr)).
   { (* the comparison with null is one C defines *)
-    sep_apply (array_position_comparable sh bs arr k SH H0 Hk).
+    sep_apply (array_position_comparable sh bs arr k Hsh Hn Hk).
     apply comparable_with_null. destruct arr; try contradiction. exact I. }
   { (* buf == Z_NULL cannot happen: the pointer is a real one *)
     exfalso. destruct arr; try contradiction.
@@ -140,7 +147,7 @@ Proof.
      LOCAL (temp _adler (Vlong (Int64.repr (low16 adler)));
             temp _sum2 (Vlong (Int64.repr (high16 adler)));
             temp _buf (offset_val k arr); temp _len (Vlong (Int64.repr 0)))
-     SEP (data_at sh (tarray tuchar (Zlength bs)) (map Vubyte bs) arr)).
+     SEP (data_at sh (tarray tuchar (Zlength bs)) bs arr)).
   { exfalso. norm_tests. lia. }
   { forward. entailer!. }
   (* ---- fewer than 16 bytes: the branch taken ---- *)
@@ -151,12 +158,12 @@ Proof.
      LOCAL (temp _adler (Vlong (Int64.repr (low16 adler)));
             temp _sum2 (Vlong (Int64.repr (high16 adler)));
             temp _buf (offset_val k arr); temp _len (Vlong (Int64.repr 0)))
-     SEP (data_at sh (tarray tuchar (Zlength bs)) (map Vubyte bs) arr))
+     SEP (data_at sh (tarray tuchar (Zlength bs)) bs arr))
     break:
     (PROP ()
      LOCAL (temp _adler (Vlong (Int64.repr (low16 adler)));
             temp _sum2 (Vlong (Int64.repr (high16 adler))))
-     SEP (data_at sh (tarray tuchar (Zlength bs)) (map Vubyte bs) arr)).
+     SEP (data_at sh (tarray tuchar (Zlength bs)) bs arr)).
   - entailer!.
   - (* the loop test fails at once, so no byte is read *)
     forward. forward.
@@ -169,7 +176,7 @@ Proof.
       (PROP ()
        LOCAL (temp _adler (Vlong (Int64.repr (low16 adler mod base)));
               temp _sum2 (Vlong (Int64.repr (high16 adler))))
-       SEP (data_at sh (tarray tuchar (Zlength bs)) (map Vubyte bs) arr)).
+       SEP (data_at sh (tarray tuchar (Zlength bs)) bs arr)).
     { norm_tests. forward.
       assert (E : low16 adler mod base = low16 adler - 65521)
         by (unfold base; symmetry; apply (Z.mod_unique _ 65521 1); lia).

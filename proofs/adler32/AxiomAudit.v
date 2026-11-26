@@ -10,7 +10,7 @@
     under one fixed name. *)
 
 From fvzlib.proofs.adler32 Require Verif VerifWrapper EmptyBuffer
-  ContractProof Combine CombineGuarded.
+  ContractProof ContractReview Combine CombineGuarded.
 
 (** The contracts of [adler32_z] and [adler32], each covering every kind
     of buffer argument, and the lemmas that each narrower contract follows
@@ -23,6 +23,14 @@ Print Assumptions ContractProof.adler32_z_contract_gives_empty.
 Print Assumptions ContractProof.adler32_contract_gives_null.
 Print Assumptions ContractProof.adler32_contract_gives_buffer.
 Print Assumptions ContractProof.adler32_contract_gives_empty.
+
+(** The checked statements behind the review of preconditions. *)
+Print Assumptions ContractReview.any_ulong.
+Print Assumptions ContractReview.any_uint.
+Print Assumptions ContractReview.any_long.
+Print Assumptions ContractReview.null_buffer_accepted.
+Print Assumptions ContractReview.fresh_array_accepted.
+Print Assumptions ContractReview.partly_filled_array_accepted.
 
 (** The narrower contracts they are derived from: a null buffer, a
     non-empty buffer, and a non-null buffer of length zero. *)

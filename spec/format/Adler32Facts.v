@@ -11,11 +11,12 @@
     - [update_adler32], [update_app]: a checksum can be computed in pieces.
     - [adler32_range]: every checksum fits in 32 bits.
     - [s1_app], [s2_app]: the checksum of a concatenation, in closed form.
+    - [adler32_one_byte_changed]: changing one byte changes the checksum.
 
     This file may depend on the Rocq standard library and Layer 1 only. *)
 
 From Stdlib Require Import ZArith List Lia.
-From fvzlib.format Require Import Adler32.
+From fvzlib.format Require Import Bytes Adler32.
 Import ListNotations.
 Local Open Scope Z_scope.
 
@@ -298,4 +299,23 @@ Proof.
     as [q2 ->].
   destruct (mod_decomp (1 + sum a)) as [q3 ->].
   apply mod_eq_intro with (k := q1 + q2 + Z.of_nat (length b) * q3). ring.
+Qed.
+
+(** ** Every byte counts
+
+    Two sequences that differ in exactly one byte have different
+    checksums.  So the checksum of a sequence cannot be found without
+    looking at every byte of it.  A contract for a function that returns
+    the checksum must therefore let the function read every byte. *)
+
+Theorem adler32_one_byte_changed before a b after :
+  is_byte a -> is_byte b -> a <> b ->
+  adler32 (before ++ a :: after) <> adler32 (before ++ b :: after).
+Proof.
+  unfold is_byte. intros Ha Hb Hab E.
+  apply (f_equal low16) in E. rewrite !low16_adler32 in E.
+  unfold s1 in E. rewrite !sum_app, !sum_cons in E.
+  destruct (mod_decomp (1 + (sum before + (a + sum after)))) as [q1 E1].
+  destruct (mod_decomp (1 + (sum before + (b + sum after)))) as [q2 E2].
+  rewrite E1, E2 in E. unfold base in E. lia.
 Qed.

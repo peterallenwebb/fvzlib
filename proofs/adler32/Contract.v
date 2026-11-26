@@ -1,7 +1,10 @@
 (** * Adler-32: the contracts of [adler32_z] and [adler32] (Layer 3)
 
-    One contract for each function, covering every call the manual allows.
-    A downstream proof imports these.  [Spec.v] and [EmptyBuffer.v] hold
+    One contract for each function.  It covers every call the manual
+    allows, apart from two kinds of call with a length of zero that the
+    tools cannot describe.  Every clause of each precondition is reviewed
+    in [audit/preconditions-adler32.toml].  A downstream proof imports
+    these.  [Spec.v] and [EmptyBuffer.v] hold
     three narrower contracts per function, one for each kind of buffer
     argument.  [ContractProof.v] derives the contracts here from those
     three, and shows that each of the three follows from the one here.
@@ -22,9 +25,13 @@ From fvzlib.proofs.adler32 Require Import adler32_clight Bridge Spec.
 (** ** The buffer argument
 
     What the caller passes as [buf].  It is either the null pointer, or a
-    run of bytes [bs] inside an array that the caller owns and may read.
-    [before] holds the bytes of the array in front of the run and [after]
-    the bytes behind it.  Either may be empty.
+    run of bytes [bs] inside an array that the caller owns.  [before] holds
+    what the array has in front of the run and [after] what it has behind
+    it.  Either may be empty.
+
+    The function reads the run and nothing else.  So [before] and [after]
+    are lists of values, not of bytes: the cells around the run may hold
+    anything, and may be uninitialized.  Only the run must hold bytes.
 
     The run itself may be empty, which is the call with a length of zero.
     The array as a whole may not be.  The code compares [buf] with null,
@@ -33,7 +40,12 @@ From fvzlib.proofs.adler32 Require Import adler32_clight Bridge Spec.
     non-empty array is such a pointer. *)
 Inductive buffer_arg :=
 | Null
-| Buffer (sh : share) (before bs after : list byte).
+| Buffer (sh : share) (before : list val) (bs : list byte) (after : list val).
+
+(** Everything the caller's array holds: the run, and what is around it. *)
+Definition buffer_array (before : list val) (bs : list byte)
+    (after : list val) : list val :=
+  before ++ map Vubyte bs ++ after.
 
 (** The buffer as the Layer 2 specification sees it: no buffer, or the
     bytes of the run. *)
@@ -48,15 +60,18 @@ Definition buffer_ptr (b : buffer_arg) (base : val) : val :=
   | Buffer _ before _ _ => offset_val (Zlength before) base
   end.
 
-(** What the caller must ensure: the array is readable and not empty, and
-    [len] is the length of the run.  Nothing is asked of a null buffer,
+(** What the caller must ensure.  [len] is the length of the run.  The
+    caller has some part in the ownership of the array, which is what [sh]
+    stands for, and that part is enough to read with unless the run is
+    empty.  The array is not empty.  Nothing is asked of a null buffer,
     whatever [len] is. *)
 Definition buffer_ok (b : buffer_arg) (len : Z) : Prop :=
   match b with
   | Null => True
   | Buffer sh before bs after =>
-      readable_share sh /\ Zlength bs = len /\
-      0 < Zlength (before ++ bs ++ after)
+      Zlength bs = len /\
+      sepalg.nonidentity sh /\ (bs <> [] -> readable_share sh) /\
+      0 < Zlength (buffer_array before bs after)
   end.
 
 (** The memory the caller lends for the call: the whole array, or nothing
@@ -65,8 +80,8 @@ Definition buffer_rep (b : buffer_arg) (base : val) : mpred :=
   match b with
   | Null => emp
   | Buffer sh before bs after =>
-      data_at sh (tarray tuchar (Zlength (before ++ bs ++ after)))
-              (map Vubyte (before ++ bs ++ after)) base
+      data_at sh (tarray tuchar (Zlength (buffer_array before bs after)))
+              (buffer_array before bs after) base
   end.
 
 (** ** adler32_z *)

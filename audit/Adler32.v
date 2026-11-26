@@ -16,10 +16,12 @@ Print Assumptions Adler32Facts.update_app.
 Print Assumptions Adler32Facts.s1_app.
 Print Assumptions Adler32Facts.s2_app.
 Print Assumptions Adler32Facts.prefixes_firstn.
+Print Assumptions Adler32Facts.adler32_one_byte_changed.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_initial_value.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_reference_meets_spec.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_spec_deterministic.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_spec_range.
+Print Assumptions fvzlib.api.Adler32Facts.checksum_form_iff.
 Print Assumptions fvzlib.api.Adler32Facts.usage_example.
 Print Assumptions fvzlib.api.Adler32Facts.combine_reference_meets_spec.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_combine_spec_deterministic.

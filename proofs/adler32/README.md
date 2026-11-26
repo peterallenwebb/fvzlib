@@ -3,11 +3,11 @@
 Layers 3 and 4 for `adler32.c` of patched zlib 1.4: the C contracts and the
 VST proofs that the code meets them.
 
-Checked on 2026-11-25 on the project's first target, x86-64 Linux, in the
+Checked on 2026-11-26 on the project's first target, x86-64 Linux, in the
 toolchain container, with Rocq 9.2.0, CompCert 3.18, and VST 2.17. They were
-first checked on 2026-11-24 on an ARM Mac and carried over with no change to
-any proof script. `make full` at the top of the repository runs them.
-`make check` does not, because they need VST.
+first checked on 2026-11-24 on an ARM Mac and carried over to the target the
+next day with no change to any proof script. `make full` at the top of the
+repository runs them. `make check` does not, because they need VST.
 
 ## What is proven
 
@@ -15,11 +15,13 @@ The functions proven are the real ones from the patched tree, with no
 instrumentation and no transformation. `adler32.c` contains no goto, so the
 contracts attach directly to the code that ships.
 
-Each function has one contract, covering every call the manual allows.
+Each function has one contract. It covers every call the manual allows,
+apart from two kinds of call with a length of zero that the tools cannot
+describe. See "The buffer of length zero".
 
 | Function | Contract | Proven |
 |---|---|---|
-| `adler32_z` | `adler32_z_contract`, in `Contract.v` | Memory safe, the caller's memory unchanged, result below 2^32, and result satisfies the Layer 2 specification. For a null buffer of any length, or a run of bytes of any length, including zero, inside a non-empty array the caller owns. Any 64-bit checksum argument. |
+| `adler32_z` | `adler32_z_contract`, in `Contract.v` | Memory safe, the caller's memory unchanged, result below 2^32, and result satisfies the Layer 2 specification. For a null buffer of any length, or a run of bytes of any length, including zero, inside a non-empty array the caller owns. The rest of the array may hold anything. Any 64-bit checksum argument. |
 | `adler32` | `adler32_contract`, in `Contract.v` | The same, with a 32-bit length |
 | `adler32_combine` | `adler32_combine_funspec`, in `Combine.v` | Result satisfies the Layer 2 specification, for any two 64-bit arguments and any 64-bit signed length |
 | `adler32_combine64` | `adler32_combine64_funspec`, in `Combine.v` | The same |
@@ -57,8 +59,10 @@ Every proof rests on VST's standard axioms only. The build checks that:
 
 `Contract.v` holds the contract a caller should use. It describes the buffer
 argument as either null, or a run of bytes inside an array the caller owns,
-with the bytes before and after the run named. The run may be empty. The
-array may not be.
+with what the array holds before and after the run named. The run may be
+empty. The array may not be. Only the run has to hold bytes. The cells around
+it may hold anything and may be uninitialized, since the function does not
+read them.
 
 `ContractProof.v` does not prove that contract against the C code a second
 time. For any one call, the contract follows from one of the three narrower
@@ -70,7 +74,8 @@ Three things to know about it:
 
 - **It covers a call that none of the three covers directly**: a non-empty
   run of bytes inside a larger array. That follows from the contract for a
-  non-empty buffer, because the rest of the array is not touched.
+  non-empty buffer, because the rest of the array is not touched. The rest
+  need not be initialized.
 - **Nothing was lost.** Each of the six narrower contracts is proven to
   follow from the single contract of its function.
 - **The three proofs about `adler32_z` are now stated with no assumptions
@@ -91,19 +96,129 @@ first byte to one past the last. The proof shows that the comparison is one
 C defines, that the loop over the bytes exits before it reads, and that the
 array comes back unchanged.
 
+Since nothing is read, the contract asks nothing about what the array holds,
+and does not ask for the right to read it. Until the review of 2026-11-26 it
+asked for both. That excluded a call that real code makes: a loop reads into
+a buffer that has never been written, the first read finds no data, and the
+loop passes the buffer with a length of zero. That call is now covered, and
+`fresh_array_accepted` in `ContractReview.v` states it.
+
 For no bytes, the Layer 2 specification says a genuine running checksum
 comes back as it went in. The code returns the two halves of its argument,
 each reduced modulo 65521, which is the same value for every genuine
 checksum.
 
-One call that C allows is outside this contract: a pointer to an allocation
-of size zero, such as some implementations return from `malloc(0)`.
-CompCert's memory model has no position in such a block that it accepts in
-a comparison, so VST cannot prove anything about that call.
+Two calls with a length of zero are outside this contract, though C allows
+them on this target. Both are limits of the tools, and neither is covered by
+any claim made here.
+
+- **A pointer to an allocation of size zero**, such as some implementations
+  return from `malloc(0)`. CompCert's memory model has no position in such a
+  block that it accepts in a comparison, so VST cannot prove anything about
+  that call.
+- **A pointer that is not null and points to no object**, such as the aligned
+  constant Rust uses for an empty vector. VST accepts as a pointer argument
+  only null or an address inside a block.
+
+A caller who may hold such a pointer can skip the call when the length is
+zero. For a genuine checksum the call returns its argument.
+
+## Review of preconditions
+
+Every clause of the precondition of every contract is listed in
+[audit/preconditions-adler32.toml](../../audit/preconditions-adler32.toml)
+with a verdict and a reason. Three questions were asked of each: is it
+needed, can the caller meet it and know that it has, and does it constrain
+the content of the data. `tools/check_preconditions.py` reads the contracts
+from their source and fails if a clause is not in the review, or if a
+definition the review quotes has changed. `make check` runs it. So a
+precondition cannot be added or changed without the review changing too.
+The tool does not judge the reasons.
+
+The review of 2026-11-26, in numbers. A clause is one item of a
+precondition, or one part of a definition it uses.
+
+| Verdict | Clauses | Meaning |
+|---|---|---|
+| type | 13 | Only gives an argument its C type. Every value of the type meets it. |
+| names | 14 | Only says which value is passed as which argument. |
+| nothing | 7 | Asks nothing of the caller. |
+| defined | 6 | Refers to a definition that is reviewed under its own name. |
+| needed | 5 | The code cannot do without it. |
+| promise | 4 | A condition on the promised result. The call is safe without it. |
+| limit | 2 | Stricter than C requires, because of a limit of the tools. |
+
+What the caller of `adler32_z` or `adler32` must ensure comes to this, the
+five clauses that are needed:
+
+1. **The `len` bytes at the pointer lie in an array the caller holds.** No
+   function could return the checksum without reading all of them: changing
+   any one byte changes the checksum. That is `adler32_one_byte_changed` in
+   Layer 1.
+2. **That array is live**, so that the pointer may be compared with null.
+3. **If `len` is not zero, the caller may read those bytes**, which also
+   means no other thread writes them during the call. The manual does not
+   say this. It is the usual rule for a C function that reads a buffer, and
+   we propose no change to the manual.
+4. **The caller lends the array for the length of the call.** It comes back
+   unchanged.
+5. **Those bytes are initialized.** They may have any values. C itself is
+   laxer here: read as `unsigned char`, uninitialized memory gives an
+   unspecified value. This project claims that no uninitialized memory is
+   read, so a caller who checksums such memory is outside the contract.
+
+For a null buffer nothing is asked. The combine functions have no
+precondition at all beyond the types of their arguments: any three values
+may be passed.
+
+The four conditions on the promise are in the Layer 2 specifications. The
+result of `adler32_z` is the updated checksum only if the checksum argument
+is the checksum of some earlier data. The result of a combine function is
+the combined checksum only if both arguments are checksums and the length is
+that of the second sequence. Without them the contracts still hold, and
+promise less:
+
+- `adler32(0xFFFFFFF0, buf, 1)` with a zero byte returns `0xFFFEFFF0` on
+  this target. That is below 2^32, as the contract says, and its upper half
+  is not below 65521.
+- `adler32_combine(0xFFFFFFF0, 0xFFFF0000, 1)` returns `0x1000BFFEF`, which
+  does not fit in 32 bits.
+
+A caller can test a value it did not compute. `checksum_form_iff` in
+Layer 2 proves that a value is the checksum of some data exactly when it
+fits in 32 bits and both of its halves are below 65521.
+
+No clause constrains the content of the data.
+
+What the review changed:
+
+- **The array around the run may hold anything.** It had to hold
+  initialized bytes. Nothing needed that. See "The buffer of length zero"
+  above for the call it excluded.
+- **An empty run needs no right to read.** It needed one. The difference
+  matters only to a caller that holds a part of the ownership of an array
+  that does not allow reading.
+- **A second limit of the tools is recorded**: the pointer that is not null
+  and points to no object.
+
+The limits of the review:
+
+- **The reasons are prose.** Ten Rocq results back parts of them, and the
+  tool checks that those results exist. That a clause is needed is argued,
+  not proven, except for the first of the five above.
+- **The two values above were observed by running zlib**, on 2026-11-26,
+  pristine and patched. No part of the build repeats that.
+- **Conditions that are not clauses are not in the review.** A VST contract
+  says nothing about how deep the stack may grow. And every contract here
+  is for this target, where `unsigned long` has 64 bits.
+- **The cost contracts are not reviewed.** They are in `spikes/termination`,
+  for instrumented code, and cover fewer calls than the contracts here.
 
 ## What is not proven here
 
-- **A zero-length buffer in an allocation of size zero.** See above.
+- **Two zero-length calls that C allows.** A pointer to an allocation of
+  size zero, and a pointer that is not null and points to no object. See
+  "The buffer of length zero".
 - **A 32-bit range for the combine functions.** Their contract does not
   promise that the result fits in 32 bits. For arguments that are not
   checksums it need not, and the manual promises nothing for those.
@@ -237,6 +352,14 @@ The limits:
   `adler32.c`. The nearest is our own finding F0001, and the file without
   that patch is killed, in `body_adler32_z_null`.
 
+On 2026-11-26 the review of preconditions changed `EmptyBuffer.v`,
+`Contract.v`, and `ContractProof.v`. The full run was not repeated. No
+mutant was killed by any of those three files, and a mutant is killed by
+the first file that fails, so the 521 are killed as before. As a check, 93
+mutants were run again: the 4 survivors, the file without our patch, and
+every mutant in the first part of `adler32_z`. The same 4 survive and the
+other 83 that compile are killed.
+
 To repeat the run, after `make check` and `make proofs`:
 
 ```
@@ -263,6 +386,7 @@ The full list, one line per mutant, is written to
 | `EmptyBuffer.v` | The contracts and proofs for a buffer of length zero. |
 | `Contract.v` | The single contract of `adler32_z` and of `adler32`. Definitions only. |
 | `ContractProof.v` | The derivation of those contracts from the narrower ones, and the proofs that the narrower ones follow from them. |
+| `ContractReview.v` | Checked statements that back the review of preconditions. |
 | `AxiomAudit.v` | Every proven result, with what it depends on printed for the axiom check. |
 | `Combine.v` | The contracts and proofs for the combine functions. |
 | `CensusAdler32.v` | The census for this file, pinned as checked statements. |

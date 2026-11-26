@@ -1,0 +1,533 @@
+# Review of the preconditions of the Adler-32 contracts.
+#
+# Reviewed on 2026-11-26, for patched zlib 1.4 on x86-64 Linux.
+#
+# Every clause of the precondition of every contract in proofs/adler32 is
+# listed here, with a verdict and a reason.  tools/check_preconditions.py
+# reads the contracts from their Rocq source and fails if a clause there is
+# not listed here, or a clause here is not there.  It does not judge the
+# reasons.  Those are for a reader to judge.
+#
+# Three questions were asked of each clause:
+#
+#   1. Is it needed?  Could the code, or the promise made about it, do
+#      without the clause?
+#   2. Can the caller meet it, and know that it has?
+#   3. Does it constrain the content of the data?  No clause may.
+#
+# The verdicts:
+#
+#   type     The clause only gives an argument its C type.  Every value of
+#            the type meets it.
+#   names    The clause only says which value is passed as which argument.
+#   nothing  The clause asks nothing of the caller.
+#   defined  The clause is a definition, reviewed below under its name.
+#   needed   The code cannot do without it.
+#   promise  A condition on the promised result, not on the call.  The call
+#            is safe without it.
+#   limit    Stricter than C requires.  It is there because of a limit of
+#            the tools, and the call it excludes is not covered by any
+#            claim of this project.
+#
+# `caller` says how a caller meets the clause.  `checked_by` names Rocq
+# results that state part of the reason and are proven.
+#
+# No clause constrains the content of the data.  The one clause about
+# content, `map Vubyte bs` in `buffer_array`, says that the bytes read are
+# initialized, and allows them any values.
+
+directory = "proofs/adler32"
+evidence_in = ["spec/format", "spec/api"]
+
+# ---------------------------------------------------------------------------
+# adler32_z
+# ---------------------------------------------------------------------------
+
+[[contract]]
+name = "adler32_z_contract"
+function = "adler32_z"
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`, the type of the checksum argument. Any 64-bit value may be passed, whether or not it is a checksum."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= len <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`, which is `z_size_t` on this target."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "buffer_ok b len"
+verdict = "defined"
+definition = "buffer_ok"
+reason = "What the caller must ensure about the buffer."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler)"
+verdict = "names"
+reason = "The first argument is the checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "buffer_ptr b base"
+verdict = "defined"
+definition = "buffer_ptr"
+reason = "The pointer passed as the buffer."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr len)"
+verdict = "names"
+reason = "The third argument is the length."
+
+[[contract.clause]]
+part = "SEP"
+text = "buffer_rep b base"
+verdict = "defined"
+definition = "buffer_rep"
+reason = "The memory the caller lends for the call."
+
+# ---------------------------------------------------------------------------
+# adler32
+# ---------------------------------------------------------------------------
+
+[[contract]]
+name = "adler32_contract"
+function = "adler32"
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`, the type of the checksum argument. Any 64-bit value may be passed."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= len <= Int.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned int`, the type of the length."
+checked_by = ["any_uint"]
+
+[[contract.clause]]
+part = "PROP"
+text = "buffer_ok b len"
+verdict = "defined"
+definition = "buffer_ok"
+reason = "What the caller must ensure about the buffer."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler)"
+verdict = "names"
+reason = "The first argument is the checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "buffer_ptr b base"
+verdict = "defined"
+definition = "buffer_ptr"
+reason = "The pointer passed as the buffer."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vint (Int.repr len)"
+verdict = "names"
+reason = "The third argument is the length."
+
+[[contract.clause]]
+part = "SEP"
+text = "buffer_rep b base"
+verdict = "defined"
+definition = "buffer_rep"
+reason = "The memory the caller lends for the call."
+
+# ---------------------------------------------------------------------------
+# The combine functions.  None has a precondition beyond the types of its
+# arguments.  They touch no memory, so each is safe to call with any three
+# values.  What the result means is another matter: see
+# `adler32_combine_spec` below.
+# ---------------------------------------------------------------------------
+
+[[contract]]
+name = "adler32_combine_funspec"
+function = "adler32_combine"
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler1 <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`. Any 64-bit value may be passed."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler2 <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`. Any 64-bit value may be passed."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "Int64.min_signed <= len2 <= Int64.max_signed"
+verdict = "type"
+reason = "The range of `long`, which is `z_off_t` on this target. A negative length may be passed."
+checked_by = ["any_long"]
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler1)"
+verdict = "names"
+reason = "The first argument is the first checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler2)"
+verdict = "names"
+reason = "The second argument is the second checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr len2)"
+verdict = "names"
+reason = "The third argument is the length."
+
+[[contract]]
+name = "adler32_combine64_funspec"
+function = "adler32_combine64"
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler1 <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`. Any 64-bit value may be passed."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler2 <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`. Any 64-bit value may be passed."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "Int64.min_signed <= len2 <= Int64.max_signed"
+verdict = "type"
+reason = "The range of `long`, which is `z_off64_t` on this target. A negative length may be passed."
+checked_by = ["any_long"]
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler1)"
+verdict = "names"
+reason = "The first argument is the first checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler2)"
+verdict = "names"
+reason = "The second argument is the second checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr len2)"
+verdict = "names"
+reason = "The third argument is the length."
+
+# The internal function that both combine functions call.  It is not
+# exported, so only this file's own code is its caller.
+[[contract]]
+name = "combine_internal_spec"
+function = "adler32_combine_"
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler1 <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "0 <= adler2 <= Int64.max_unsigned"
+verdict = "type"
+reason = "The range of `unsigned long`."
+checked_by = ["any_ulong"]
+
+[[contract.clause]]
+part = "PROP"
+text = "Int64.min_signed <= len2 <= Int64.max_signed"
+verdict = "type"
+reason = "The range of `long`, which is `z_off64_t` on this target."
+checked_by = ["any_long"]
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler1)"
+verdict = "names"
+reason = "The first argument is the first checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr adler2)"
+verdict = "names"
+reason = "The second argument is the second checksum."
+
+[[contract.clause]]
+part = "PARAMS"
+text = "Vlong (Int64.repr len2)"
+verdict = "names"
+reason = "The third argument is the length."
+
+# ---------------------------------------------------------------------------
+# Contracts that follow from a reviewed one.  Each is narrower: every call
+# it accepts, the reviewed contract accepts.  The lemma named proves that.
+# A caller uses the reviewed contract, so these are not reviewed again.
+# ---------------------------------------------------------------------------
+
+[[derived]]
+name = "adler32_z_null_spec"
+from = "adler32_z_contract"
+by = "adler32_z_contract_gives_null"
+
+[[derived]]
+name = "adler32_z_buffer_spec"
+from = "adler32_z_contract"
+by = "adler32_z_contract_gives_buffer"
+
+[[derived]]
+name = "adler32_z_empty_spec"
+from = "adler32_z_contract"
+by = "adler32_z_contract_gives_empty"
+
+[[derived]]
+name = "adler32_null_spec"
+from = "adler32_contract"
+by = "adler32_contract_gives_null"
+
+[[derived]]
+name = "adler32_buffer_spec"
+from = "adler32_contract"
+by = "adler32_contract_gives_buffer"
+
+[[derived]]
+name = "adler32_empty_spec"
+from = "adler32_contract"
+by = "adler32_contract_gives_empty"
+
+# ---------------------------------------------------------------------------
+# The buffer argument of adler32_z and adler32
+# ---------------------------------------------------------------------------
+
+[[definition]]
+name = "buffer_ok"
+file = "proofs/adler32/Contract.v"
+text = '''
+Definition buffer_ok (b : buffer_arg) (len : Z) : Prop :=
+  match b with
+  | Null => True
+  | Buffer sh before bs after =>
+      Zlength bs = len /\
+      sepalg.nonidentity sh /\ (bs <> [] -> readable_share sh) /\
+      0 < Zlength (buffer_array before bs after)
+  end
+'''
+
+[[definition.clause]]
+text = "| Null => True"
+verdict = "nothing"
+reason = "A null buffer may be passed with any length. The manual puts no condition on the length there, and since the patch for finding F0001 the code reads nothing."
+checked_by = ["null_buffer_accepted"]
+
+[[definition.clause]]
+text = "Zlength bs = len"
+verdict = "needed"
+reason = "The run is the `len` bytes that start at the pointer, which the manual writes as buf[0..len-1]. All of them must lie in the caller's array. The function has to read every one: changing any single byte changes the checksum, so no function can return the checksum without reading them all."
+caller = "The caller knows how large its array is and where in it the pointer points. This is what C asks of every pointer passed with a length."
+checked_by = ["adler32_one_byte_changed"]
+
+[[definition.clause]]
+text = "sepalg.nonidentity sh"
+verdict = "needed"
+reason = "The caller has some part in the ownership of the array. That makes the array a live object for the length of the call, and the pointer one that C allows to be compared with null. The code makes that comparison in every call. The clause asks for no right to read."
+caller = "The pointer must point into, or one past the end of, an object that has not been freed. C already makes any other pointer value unusable."
+
+[[definition.clause]]
+text = "(bs <> [] -> readable_share sh)"
+verdict = "needed"
+reason = "The function reads the bytes of the run, so the caller must hold the right to read them, which also means that nothing else writes them during the call. Nothing is read from an empty run, and the clause asks nothing then. Before this review the right to read was asked in every case."
+caller = "The caller must not let another thread write the bytes during the call. The manual does not say so. It is the usual rule for a C function that reads a buffer."
+
+[[definition.clause]]
+text = "0 < Zlength (buffer_array before bs after)"
+verdict = "limit"
+reason = "The array has at least one cell. A run that is not empty makes this true, so the clause matters only for a length of zero, where it excludes a pointer to an object of size zero, such as `malloc(0)` may return. C allows that call: the code reads nothing and compares the pointer with null, which C defines. CompCert's memory model has no position in an empty block that it accepts in a comparison, so VST cannot prove anything about it."
+caller = "A caller whose pointer may come from an allocation of size zero can skip the call when the length is zero. The call returns a genuine checksum unchanged."
+
+[[definition]]
+name = "buffer_ptr"
+file = "proofs/adler32/Contract.v"
+text = '''
+Definition buffer_ptr (b : buffer_arg) (base : val) : val :=
+  match b with
+  | Null => nullval
+  | Buffer _ before _ _ => offset_val (Zlength before) base
+  end
+'''
+
+[[definition.clause]]
+text = "| Null => nullval"
+verdict = "names"
+reason = "A null buffer is the null pointer."
+
+[[definition.clause]]
+text = "offset_val (Zlength before) base"
+verdict = "limit"
+reason = "The pointer is a position in the caller's array, anywhere from its first cell to one past its last. For a run that is not empty this is needed, and follows from the run lying in the array. For a length of zero it is stricter than C: it excludes a pointer that is not null and points to no object, such as the aligned constant Rust uses for an empty vector. The code only compares that pointer with null. On this target the comparison is well defined, though how such a pointer is made is implementation-defined in C. VST accepts as a pointer argument only null or an address inside a block."
+caller = "With a length of zero, pass a pointer into or one past the end of a live object, or skip the call. A pointer that was never set, or to an object already freed, is excluded by C itself and not only by this clause."
+
+[[definition]]
+name = "buffer_rep"
+file = "proofs/adler32/Contract.v"
+text = '''
+Definition buffer_rep (b : buffer_arg) (base : val) : mpred :=
+  match b with
+  | Null => emp
+  | Buffer sh before bs after =>
+      data_at sh (tarray tuchar (Zlength (buffer_array before bs after)))
+              (buffer_array before bs after) base
+  end
+'''
+
+[[definition.clause]]
+text = "| Null => emp"
+verdict = "nothing"
+reason = "A call with a null buffer is lent no memory."
+checked_by = ["null_buffer_accepted"]
+
+[[definition.clause]]
+text = "data_at sh (tarray tuchar (Zlength (buffer_array before bs after))) (buffer_array before bs after) base"
+verdict = "needed"
+reason = "The caller lends its array for the length of the call and gets it back unchanged, under the same share. The array is described as cells of type `unsigned char`, which is how C lets any object be read. The caller may lend more than the run: whatever is around it is passed through untouched. What the cells hold is reviewed under `buffer_array`."
+caller = "The caller owns the array, or a part of the ownership, and gives it up for the length of the call. A caller holding a larger object lends only the part it wants to name."
+
+[[definition]]
+name = "buffer_array"
+file = "proofs/adler32/Contract.v"
+text = '''
+Definition buffer_array (before : list val) (bs : list byte)
+    (after : list val) : list val :=
+  before ++ map Vubyte bs ++ after
+'''
+
+[[definition.clause]]
+text = "map Vubyte bs"
+verdict = "needed"
+reason = "Every cell of the run holds a byte, that is, the run is initialized. The function reads every cell of it, and this project claims that no uninitialized memory is read. The bytes may have any values. C itself is laxer: reading uninitialized memory as `unsigned char` gives an unspecified value. A caller relying on that, for instance to checksum a structure with padding, is outside the contract."
+caller = "The caller knows which bytes it has written."
+
+[[definition.clause]]
+text = "before ++"
+verdict = "nothing"
+reason = "The cells in front of the run may hold any values, and may be uninitialized. Before this review they had to be initialized bytes, which nothing needed."
+checked_by = ["fresh_array_accepted", "partly_filled_array_accepted"]
+
+[[definition.clause]]
+text = "++ after"
+verdict = "nothing"
+reason = "The cells behind the run may hold any values, and may be uninitialized. Before this review they had to be initialized bytes. That excluded a call with a length of zero on a buffer that had never been written, which is what a read loop does when its first read finds no data."
+checked_by = ["fresh_array_accepted", "partly_filled_array_accepted"]
+
+# ---------------------------------------------------------------------------
+# Conditions on the promised result.  These are in the Layer 2
+# specifications that the postconditions refer to.  None is a condition on
+# the call: every contract above holds without them.  They say when the
+# value returned is the checksum the manual describes.
+# ---------------------------------------------------------------------------
+
+[[definition]]
+name = "running_checksum"
+file = "spec/api/Adler32.v"
+text = '''
+Definition running_checksum (adler : Z) (data : list Z) : Prop :=
+  all_bytes data /\ adler = adler32 data
+'''
+
+[[definition.clause]]
+text = "all_bytes data /\\ adler = adler32 data"
+verdict = "nothing"
+reason = "The meaning of `running checksum`: the value is the Adler-32 checksum of some sequence of bytes. A definition of a term asks nothing by itself. The clauses below that use it are what ask."
+
+[[definition]]
+name = "adler32_spec"
+file = "spec/api/Adler32.v"
+text = '''
+Definition adler32_spec (adler : Z) (buf : option (list Z)) (result : Z) : Prop :=
+  match buf with
+  | None => running_checksum result []
+  | Some bytes =>
+      all_bytes bytes ->
+      forall earlier,
+        running_checksum adler earlier ->
+        running_checksum result (earlier ++ bytes)
+  end
+'''
+
+[[definition.clause]]
+text = "| None => running_checksum result []"
+verdict = "nothing"
+reason = "With a null buffer the promise is unconditional: the result is the initial value, whatever the other two arguments are."
+
+[[definition.clause]]
+text = "all_bytes bytes ->"
+verdict = "nothing"
+reason = "Layer 2 speaks of lists of integers, so it has to say that they are bytes. The contents of a C buffer always are, so a C caller is asked nothing."
+checked_by = ["bytes_of_all_bytes"]
+
+[[definition.clause]]
+text = "running_checksum adler earlier ->"
+verdict = "promise"
+reason = "The manual's promise is to `update a running Adler-32 checksum`. The result is the checksum of the earlier data followed by the buffer, and there is such a result only if the argument is the checksum of some earlier data. For any other argument the manual promises nothing, and the contract then promises memory safety and a result below 2^32 and no more. On this target `adler32(0xFFFFFFF0, buf, 1)` with a zero byte returns 0xFFFEFFF0, whose upper half is not below 65521."
+caller = "Pass the initial value, or a value an earlier call returned. A caller who has only the value can test it: it is the checksum of some data exactly when it fits in 32 bits and both of its halves are below 65521."
+checked_by = ["checksum_form_iff"]
+
+[[definition]]
+name = "adler32_combine_spec"
+file = "spec/api/Adler32.v"
+text = '''
+Definition adler32_combine_spec (adler1 adler2 len2 result : Z) : Prop :=
+  forall seq1 seq2,
+    running_checksum adler1 seq1 ->
+    running_checksum adler2 seq2 ->
+    len2 = Z.of_nat (length seq2) ->
+    running_checksum result (seq1 ++ seq2)
+'''
+
+[[definition.clause]]
+text = "running_checksum adler1 seq1 ->"
+verdict = "promise"
+reason = "The manual speaks of checksums that `were calculated for each` of two sequences. For other values it promises nothing, and neither does the contract, not even that the result fits in 32 bits. On this target `adler32_combine(0xFFFFFFF0, 0xFFFF0000, 1)` returns 0x1000BFFEF."
+caller = "Pass a value that `adler32` or `adler32_z` returned for the first sequence, or test the value as for `adler32_spec`."
+checked_by = ["checksum_form_iff"]
+
+[[definition.clause]]
+text = "running_checksum adler2 seq2 ->"
+verdict = "promise"
+reason = "The same, for the second sequence."
+caller = "Pass a value that `adler32` or `adler32_z` returned for the second sequence."
+checked_by = ["checksum_form_iff"]
+
+[[definition.clause]]
+text = "len2 = Z.of_nat (length seq2) ->"
+verdict = "promise"
+reason = "The third argument is the length of the second sequence. No sequence has a negative length, so for a negative argument nothing is promised, as the manual says: the result then `has no meaning or utility`."
+caller = "The caller knows how long the second sequence was."
+checked_by = ["adler32_combine_spec_negative"]

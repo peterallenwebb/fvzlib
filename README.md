@@ -29,7 +29,9 @@ small changes to the file, 521 make a proof fail, and the other 4 are
 explained. The reference model is also tested against the pinned zlib as
 gcc builds it, pristine and patched, on about five thousand inputs in every
 full build. Of the two theorems that the cost method needs, one is proven
-and the other is stated and not proven.
+and the other is stated and not proven. Every precondition of the Adler-32
+contracts is reviewed, and the build fails if one changes without its
+review.
 
 The work moved to the x86-64 Linux target on 2026-11-25. The target
 environment is a container, defined by one file, and one command runs every
@@ -43,7 +45,7 @@ the container from nothing.
 |---|---|
 | `spec/format/` | Layer 1. Format specifications. Standard library only. |
 | `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
-| `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, `semantics-parameters.txt`, two names CompCert leaves undefined that a result about executions may mention, and `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason |
+| `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, `semantics-parameters.txt`, two names CompCert leaves undefined that a result about executions may mention, `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason, and `preconditions-adler32.toml`, the review of every precondition of the Adler-32 contracts |
 | `trace/` | Traceability from source sentences to definitions and theorems |
 | `ledger/` | Findings about zlib, and obligations not yet proven, one file each |
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
@@ -76,8 +78,9 @@ make check
 
 That compiles the Rocq sources, which runs the test vectors. It then checks
 the layer dependency rules, the assumption audit, and traceability against
-RFC 1950 and the pinned `zlib.h`. Last, it applies the patch sequence to a
-copy of upstream and runs each witness against both trees.
+RFC 1950 and the pinned `zlib.h`. It applies the patch sequence to a copy of
+upstream and runs each witness against both trees. Last, it checks that the
+review of preconditions lists every clause of every contract.
 
 The patch sequence currently holds one patch.
 
@@ -994,7 +997,9 @@ ones. The draft contracts are in
 - **A non-null buffer is a run of bytes inside a non-empty array the caller
   owns.** This makes the pointer valid even for a length of 0, which the code
   needs because it compares the pointer with null. A simpler corollary
-  contract covers a plain non-empty buffer.
+  contract covers a plain non-empty buffer. Since the review of 2026-11-26,
+  only the run has to hold initialized bytes, and only a run that is not
+  empty has to be readable.
 - **Each contract has two forms from one definition.** With ticks, which is
   what VST proves about the instrumented code. Without ticks, which is what a
   downstream verifier imports for the real code.
@@ -1362,6 +1367,62 @@ Progress on 2026-11-25, the move to the first target:
   - **Not done under this criterion:** the corresponding theorem for goto
     removal, T0001, and for arithmetic guards, T0003, are still stated
     only in prose. Neither is one of the two this criterion names.
+
+Progress on 2026-11-26:
+
+- **Criterion 4, every precondition reviewed.** The review is
+  `audit/preconditions-adler32.toml`. It lists each clause of the
+  precondition of each of the five contracts, and of the definitions they
+  use, 51 clauses in all, with a verdict and a reason. Three questions were
+  asked of each: is it needed, can the caller meet it and know that it has,
+  and does it constrain the content of the data. `make check` now runs
+  `tools/check_preconditions.py`, which reads the contracts from their
+  source and fails if a clause is missing from the review or a quoted
+  definition has changed. It does not judge the reasons. See
+  [proofs/adler32/README.md](proofs/adler32/README.md#review-of-preconditions).
+  - **Result.** 27 clauses only give an argument its type or say which
+    value is passed. 5 are needed, all about the buffer of `adler32_z` and
+    `adler32`: the bytes lie in an array the caller holds, the array is
+    live, the bytes are readable if there are any, the array is lent for
+    the call, and the bytes are initialized. 4 are conditions on the
+    promised result and not on the call. 2 are limits of the tools. The
+    combine functions have no precondition beyond the types of their
+    arguments. No clause constrains the content of the data.
+  - **The review found two demands that nothing needed, and both are
+    removed.** The contracts asked that the caller's whole array hold
+    initialized bytes and be readable, though only the run of bytes passed
+    is read. That excluded a call that real code makes: a read loop whose
+    first read finds no data passes a buffer that has never been written,
+    with a length of zero. The contracts now ask for initialized bytes in
+    the run only, and for the right to read only when the run is not
+    empty. The proofs were adjusted and the six narrower contracts still
+    follow from the two single ones.
+  - **Three results were proven for the review.** Changing one byte of a
+    sequence changes its checksum, so any function that returns the
+    checksum must read every byte: `adler32_one_byte_changed`, Layer 1. A
+    value is the checksum of some data exactly when it fits in 32 bits and
+    both halves are below 65521, so a caller can test a checksum it did
+    not compute: `checksum_form_iff`, Layer 2. And an array that has never
+    been written is accepted with a length of zero:
+    `fresh_array_accepted`, in `proofs/adler32/ContractReview.v`.
+  - **A second limit of the tools is recorded.** With a length of zero,
+    the contracts exclude a pointer that is not null and points to no
+    object, such as Rust uses for an empty vector, as they already
+    excluded a pointer to an allocation of size zero. C allows both calls
+    on this target. No claim of ours covers them.
+  - **Limits.** That a clause is needed is argued in prose, not proven,
+    apart from the result about one changed byte. The cost contracts in
+    the termination spike are not reviewed. Mutation testing was not run
+    again in full: see below.
+- **Mutation testing after the change.** Three proof files changed, so
+  93 of the 624 mutants were checked again: the 4 that survived, the file
+  without our patch, and every mutant in the first part of `adler32_z`. The
+  same 4 survive, and the other 83 that compile are killed, as before. The
+  full run was not repeated. The files that killed every mutant on
+  2026-11-25 are unchanged, and a mutant is killed by the first file that
+  fails.
+- **Still open under criterion 4:** the form with ticks of each contract,
+  generated from the same definition as the form without.
 
 ### Milestone 2: the inflate reference model
 

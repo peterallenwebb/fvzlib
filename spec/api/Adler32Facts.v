@@ -11,6 +11,8 @@
       where the manual makes a promise, it fixes the result.
     - [adler32_initial_value]: the required initial value is 1.
     - [adler32_spec_range]: results are 32-bit values.
+    - [checksum_form_iff]: a value is the checksum of some data exactly
+      when it fits in 32 bits and both of its halves are below 65521.
     - [usage_example]: the usage example in the manual computes the checksum
       of all the data, however it is split into buffers.
     - [adler32_combine_spec_negative]: a negative length allows any result.
@@ -101,6 +103,80 @@ Proof.
   intros Hadler H.
   destruct (H all_bytes_nil earlier Hadler) as [_ ->].
   destruct Hadler as [_ ->]. rewrite app_nil_r. reflexivity.
+Qed.
+
+(** ** Which values are checksums
+
+    The manual's promise for a buffer holds when the checksum argument is
+    the checksum of some earlier data.  A caller who has only the value can
+    still tell whether that is so: the value must fit in 32 bits, and each
+    of its halves must be below 65521.  Every such value is the checksum of
+    some sequence of bytes. *)
+
+Definition checksum_form (adler : Z) : Prop :=
+  0 <= adler < 4294967296 /\ low16 adler < base /\ high16 adler < base.
+
+Lemma sum_repeat x n : sum (repeat x n) = Z.of_nat n * x.
+Proof. induction n; cbn [repeat]; [reflexivity | rewrite sum_cons; lia]. Qed.
+
+Lemma all_bytes_repeat x n : is_byte x -> all_bytes (repeat x n).
+Proof. intros. apply Forall_forall. intros y Hy. apply repeat_spec in Hy. subst. assumption. Qed.
+
+(** Zero bytes leave the first sum at 1 and add 1 to the second each. *)
+Lemma s1_zeros n : s1 (repeat 0 n) = 1.
+Proof. unfold s1. rewrite sum_repeat, Z.mul_0_r. reflexivity. Qed.
+
+Lemma s2_zeros n : s2 (repeat 0 n) = Z.of_nat n mod base.
+Proof.
+  induction n as [|n IH]; [reflexivity |].
+  change (repeat 0 (S n)) with ([0] ++ repeat 0 n).
+  rewrite s2_app, IH, repeat_length.
+  change (s1 [0]) with 1. change (s2 [0]) with 1.
+  rewrite Z.sub_diag, Z.mul_0_r, Z.add_0_r, Zplus_mod_idemp_r.
+  f_equal. lia.
+Qed.
+
+(** Bytes of value 1 add 1 to the first sum each. *)
+Lemma s1_ones n : s1 (repeat 1 n) = (1 + Z.of_nat n) mod base.
+Proof. unfold s1. rewrite sum_repeat, Z.mul_1_r. reflexivity. Qed.
+
+(** A value with the form of a checksum is the checksum of this data:
+    enough zero bytes to set the second sum, then enough bytes of value 1
+    to set the first. *)
+Theorem checksum_form_iff adler :
+  (exists data, running_checksum adler data) <-> checksum_form adler.
+Proof.
+  split.
+  - intros [data [_ ->]]. unfold checksum_form.
+    rewrite low16_adler32, high16_adler32.
+    pose proof (adler32_range data). pose proof (s1_range data).
+    pose proof (s2_range data). lia.
+  - intros (Hrange & Hlow & Hhigh).
+    pose proof (low16_range adler) as Ha. pose proof (high16_range adler) as Hb.
+    assert (E : adler = high16 adler * 65536 + low16 adler).
+    { unfold high16, low16.
+      rewrite (Z.mod_small (adler / 65536))
+        by (split; [apply Z.div_pos; lia | apply Z.div_lt_upper_bound; lia]).
+      pose proof (Z_div_mod_eq_full adler 65536). lia. }
+    set (a := low16 adler) in *. set (b := high16 adler) in *.
+    set (ones := repeat 1 (Z.to_nat ((a - 1) mod base))).
+    set (zeros := repeat 0 (Z.to_nat ((b - s2 ones) mod base))).
+    exists (zeros ++ ones). split.
+    + apply all_bytes_app; apply all_bytes_repeat; unfold is_byte; lia.
+    + pose proof (Z.mod_pos_bound (a - 1) base base_pos).
+      pose proof (Z.mod_pos_bound (b - s2 ones) base base_pos).
+      rewrite E. unfold adler32. f_equal; [f_equal |].
+      * rewrite s2_app. subst zeros. rewrite s2_zeros, s1_zeros, Z2Nat.id by lia.
+        rewrite Z.sub_diag, Z.mul_0_r, Z.add_0_r, Z.mod_mod by apply base_nonzero.
+        rewrite Zplus_mod_idemp_l.
+        replace (b - s2 ones + s2 ones) with b by lia.
+        symmetry. apply Z.mod_small. lia.
+      * rewrite s1_app. subst zeros ones. rewrite s1_zeros, s1_ones, Z2Nat.id by lia.
+        replace (1 + (1 + (a - 1) mod base) mod base - 1)
+          with ((1 + (a - 1) mod base) mod base) by lia.
+        rewrite Z.mod_mod by apply base_nonzero. rewrite Zplus_mod_idemp_r.
+        replace (1 + (a - 1)) with a by lia.
+        symmetry. apply Z.mod_small. lia.
 Qed.
 
 (** ** The usage example in the manual

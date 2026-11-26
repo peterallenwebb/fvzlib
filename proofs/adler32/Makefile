@@ -20,8 +20,8 @@ FLAGS   := -Q . fvzlib.proofs.adler32 -Q $(ROOT)/proofs/lib fvzlib.proofs.lib \
 include $(ROOT)/proofs/zlib.mk
 DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper \
-           EmptyBuffer Contract ContractProof Combine CensusAdler32 \
-           CombineGuarded
+           EmptyBuffer Contract ContractProof ContractReview Combine \
+           CensusAdler32 CombineGuarded
 
 .PHONY: all clean
 all: adler32_clight.v

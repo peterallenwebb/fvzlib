@@ -1,8 +1,8 @@
 # Build and check the fvzlib specifications.
 #
 #   make          compile the Rocq sources, which also runs the test vectors
-#   make check    compile, then run the layer, assumption, trace, and patch
-#                 checks
+#   make check    compile, then run the layer, assumption, trace, patch,
+#                 and precondition review checks
 #   make full     everything: the toolchain and target check, `make check`,
 #                 the check that the verified source is the built source,
 #                 the differential test of the reference model against
@@ -40,6 +40,7 @@ check: all
 	python3 tools/check_assumptions.py
 	python3 tools/check_trace.py --upstream $(UPSTREAM) --strict
 	python3 tools/check_patches.py --upstream $(UPSTREAM)
+	python3 tools/check_preconditions.py
 
 env-check:
 	python3 tools/check_env.py $(if $(EXPLORATORY),--exploratory)

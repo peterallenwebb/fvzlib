@@ -45,7 +45,7 @@ Podman.
    | Step | What it checks |
    |---|---|
    | `env-check` | Every pinned package is installed at its pinned version, and the machine and CompCert are x86-64 Linux |
-   | `check` | The specifications, test vectors, layer rules, assumption audit, traceability, and the patch sequence with its witnesses |
+   | `check` | The specifications, test vectors, layer rules, assumption audit, traceability, the patch sequence with its witnesses, and the review of preconditions |
    | `build-check` | The source given to the verifier is, token for token, the source the upstream build compiles |
    | `differential` | zlib as gcc builds it, pristine and patched, returns what the Adler-32 reference model says, on about five thousand inputs |
    | `proofs` | Every VST proof for `adler32.c` |
