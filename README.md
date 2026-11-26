@@ -18,7 +18,10 @@ Objectives are set as a starting point, and the high-level decisions are
 made. See [Decisions](#decisions), [Milestones](#milestones), and
 [Open decisions](#open-decisions).
 
-Work on Milestone 1 is under way. The format specification and the API
+Milestone 1 was closed on 2026-11-26, with some items left open and
+carried forward. They are listed under
+[Milestone 1](#milestone-1-adler-32-end-to-end). Milestone 2 is planned and
+not started. The format specification and the API
 behavior model for Adler-32 exist, with their traceability file. Every
 function in `adler32.c` of patched zlib 1.4 is proven, in VST, to return
 values that satisfy that specification, on the project's first target,
@@ -1124,7 +1127,9 @@ run them.
 
 ### Milestone 1: Adler-32, end to end
 
-Decided 2026-11-23. Under way.
+Decided 2026-11-23. Closed 2026-11-26, with open items carried forward.
+See [Closed on 2026-11-26](#closed-on-2026-11-26) at the end of this
+section.
 
 Take one whole source file, `adler32.c`, through every stage of the method.
 The file has five short functions, loops over a byte buffer, and no goto.
@@ -1534,10 +1539,61 @@ Progress on 2026-11-26:
   took 46 minutes. The proofs with ticks killed no mutant, since a plain
   proof fails first for every one that is killed.
 - **With that, nothing is left on the list of work agreed for this
-  milestone.** Whether the milestone is closed has not been decided. What
-  stays open inside the criteria is listed in the claim and in the entries
-  above: the second tick theorem, the join to VST's soundness theorem, and
-  the two transformation obligations T0001 and T0003.
+  milestone.** What stays open inside the criteria is listed in the claim
+  and in the entries above: the second tick theorem, the join to VST's
+  soundness theorem, and the two transformation obligations T0001 and
+  T0003.
+
+#### Closed on 2026-11-26
+
+The milestone is closed. Each exit criterion is met as it was worded.
+Several are met with limits, and closing the milestone does not remove
+them. The claim that results is in
+[claims/adler32.md](claims/adler32.md), and it is a claim about one file.
+
+| Criterion | State at closing |
+|---|---|
+| 1. Reproducible environment | Met. One file defines the container, and `make full` passes in it on two machines. |
+| 2. Proven equals built | Met for `adler32.c`. |
+| 3. Reference model | Met. Test vectors pass, and the model is compared with the pinned zlib in every full build. |
+| 4. Contracts | Met. Each of the five functions has one contract, a reviewed precondition, and a form with a cost bound. The cost bound is for the function with a tick counter added. |
+| 5. Proofs | Met. No admitted lemma. Every result prints what it depends on, and the build fails if that is more than six named axioms. |
+| 6. Transformation theorems | Met as worded. The first tick theorem is proven. The second is stated and has a recorded status, which is unproven. |
+| 7. Contract transfer answered | Answered. A VST contract cannot be carried back to a function with a goto, and a statement about executions can. That form is adopted provisionally. |
+| 8. Validation | Met. Of 525 mutants, 521 break a proof and 4 are explained. All 31 sentences are mapped, 3 of them as pending. |
+| 9. Ledger and claim | Met. The ledger has four entries, and the claim is written out and checked against the repository. |
+
+What the milestone set out to learn, and what was learned:
+
+- **The method works on one whole file.** Specification, contracts, proofs,
+  the build check, and validation were all carried through for
+  `adler32.c`, on the target, by one command.
+- **Whether a contract can be carried back to the original code is answered
+  only in part.** For goto it is answered in a toy. For ticks one of two
+  theorems is proven. Neither answer has been used to state a theorem
+  about a function as shipped.
+
+Left open, and carried forward:
+
+1. **No termination theorem for the code as shipped.** It needs the second
+   tick theorem, the unproven half of
+   [T0002](ledger/T0002-tick-instrumentation.md), and the join to VST's
+   soundness theorem. The claim does not cover termination.
+2. **[T0003](ledger/T0003-arithmetic-guards.md) is unproven, and the claim
+   relies on it.** It is the one unproven obligation the claim rests on.
+3. **[T0001](ledger/T0001-goto-elimination.md) is unproven.** The claim
+   does not rely on it, since `adler32.c` has no goto. The three files
+   with goto will.
+4. **Three traceability sentences are pending.** One belongs to the stream
+   format. Two are established by the C proofs, and the traceability file
+   cannot yet point into those.
+5. **Two kinds of zero-length call are outside the contracts.** They are
+   limits of the tools and are recorded in the review of preconditions.
+6. **The proofs with ticks repeat the plain proofs by hand.** We cannot
+   yet run one proof script against both forms.
+
+Items 1 to 3 matter more for inflate than they did here. A decision on
+when to take them up belongs with the plan for the next milestone.
 
 ### Milestone 2: the inflate reference model
 
