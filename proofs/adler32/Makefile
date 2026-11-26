@@ -21,6 +21,7 @@ include $(ROOT)/proofs/zlib.mk
 DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper \
            EmptyBuffer Contract ContractProof ContractReview Combine \
+           Ticked CostContract VerifTicked CombineTicked CostContractProof \
            WholeFile CensusAdler32 CombineGuarded
 
 .PHONY: all clean

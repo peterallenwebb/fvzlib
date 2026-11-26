@@ -10,11 +10,16 @@
     under one fixed name. *)
 
 From fvzlib.proofs.adler32 Require Verif VerifWrapper EmptyBuffer
-  ContractProof ContractReview Combine WholeFile CombineGuarded.
+  ContractProof ContractReview Combine VerifTicked CombineTicked
+  CostContractProof WholeFile CombineGuarded.
 
 (** The one statement for the whole file, which the claim in
     [claims/adler32.md] names. *)
 Print Assumptions WholeFile.adler32_c_verified.
+
+(** The same for the functions with ticks and the contracts with a cost
+    bound. *)
+Print Assumptions WholeFile.adler32_c_verified_with_ticks.
 
 (** The contracts of [adler32_z] and [adler32], each covering every kind
     of buffer argument, and the lemmas that each narrower contract follows
@@ -50,3 +55,36 @@ Print Assumptions Combine.body_combine_internal.
 Print Assumptions Combine.body_adler32_combine.
 Print Assumptions Combine.body_adler32_combine64.
 Print Assumptions CombineGuarded.body_combine_internal_guarded.
+
+(** The functions with ticks: the proofs about the code, and the single
+    contract of [adler32_z] and of [adler32]. *)
+Print Assumptions VerifTicked.body_adler32_z_null_ticked.
+Print Assumptions VerifTicked.body_adler32_z_buffer_ticked.
+Print Assumptions VerifTicked.body_adler32_z_empty_ticked.
+Print Assumptions CombineTicked.body_combine_internal_ticked.
+Print Assumptions CombineTicked.body_adler32_combine_ticked.
+Print Assumptions CombineTicked.body_adler32_combine64_ticked.
+Print Assumptions CostContractProof.body_adler32_z_ticked.
+Print Assumptions CostContractProof.body_adler32_ticked.
+
+(** Each written contract with ticks and its generated one follow from
+    each other, and each generated one is the second form of its plain
+    contract. *)
+Print Assumptions CostContractProof.adler32_z_ticked_gives_generated.
+Print Assumptions CostContractProof.adler32_z_generated_gives_ticked.
+Print Assumptions CostContractProof.adler32_ticked_gives_generated.
+Print Assumptions CostContractProof.adler32_generated_gives_ticked.
+Print Assumptions CostContractProof.combine_internal_ticked_gives_generated.
+Print Assumptions CostContractProof.combine_internal_generated_gives_ticked.
+Print Assumptions CostContractProof.adler32_combine_ticked_gives_generated.
+Print Assumptions CostContractProof.adler32_combine_generated_gives_ticked.
+Print Assumptions CostContractProof.adler32_combine64_ticked_gives_generated.
+Print Assumptions CostContractProof.adler32_combine64_generated_gives_ticked.
+Print Assumptions CostContractProof.adler32_z_two_forms.
+Print Assumptions CostContractProof.adler32_two_forms.
+Print Assumptions CostContractProof.combine_internal_two_forms.
+Print Assumptions CostContractProof.adler32_combine_two_forms.
+Print Assumptions CostContractProof.adler32_combine64_two_forms.
+Print Assumptions CostContractProof.adler32_z_ticked_contract_gives_null.
+Print Assumptions CostContractProof.adler32_z_ticked_contract_gives_buffer.
+Print Assumptions CostContractProof.adler32_z_ticked_contract_gives_empty.

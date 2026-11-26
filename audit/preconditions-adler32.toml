@@ -28,6 +28,9 @@
 #   limit    Stricter than C requires.  It is there because of a limit of
 #            the tools, and the call it excludes is not covered by any
 #            claim of this project.
+#   ticks    About the counter that only the function with ticks has.  The
+#            function as it ships has no counter, and its caller is asked
+#            nothing by such a clause.
 #
 # `caller` says how a caller meets the clause.  `checked_by` names Rocq
 # results that state part of the reason and are proven.
@@ -37,7 +40,7 @@
 # initialized, and allows them any values.
 
 directory = "proofs/adler32"
-evidence_in = ["spec/format", "spec/api"]
+evidence_in = ["spec/format", "spec/api", "proofs/lib"]
 
 # ---------------------------------------------------------------------------
 # adler32_z
@@ -322,6 +325,121 @@ by = "adler32_contract_gives_buffer"
 name = "adler32_empty_spec"
 from = "adler32_contract"
 by = "adler32_contract_gives_empty"
+
+# ---------------------------------------------------------------------------
+# The forms with ticks.  Each is the contract of a function with a counter
+# added, and says what the plain contract says and how many ticks the call
+# spends.  It is not reviewed clause by clause.  Three lemmas tie it to the
+# reviewed plain contract instead:
+#
+#   gives_generated   it implies the form that `with_ticks` generates;
+#   from_generated    the generated form implies it;
+#   two_forms         the generated form is `with_ticks` applied to the
+#                     precondition and postcondition of the plain contract.
+#
+# So its precondition is the plain one and what `with_ticks` adds, which is
+# reviewed below under `with_ticks`.
+# ---------------------------------------------------------------------------
+
+[[ticked]]
+name = "adler32_z_ticked_contract"
+plain = "adler32_z_contract"
+gives_generated = "adler32_z_ticked_gives_generated"
+from_generated = "adler32_z_generated_gives_ticked"
+two_forms = "adler32_z_two_forms"
+
+[[ticked]]
+name = "adler32_ticked_contract"
+plain = "adler32_contract"
+gives_generated = "adler32_ticked_gives_generated"
+from_generated = "adler32_generated_gives_ticked"
+two_forms = "adler32_two_forms"
+
+[[ticked]]
+name = "combine_internal_ticked_spec"
+plain = "combine_internal_spec"
+gives_generated = "combine_internal_ticked_gives_generated"
+from_generated = "combine_internal_generated_gives_ticked"
+two_forms = "combine_internal_two_forms"
+
+[[ticked]]
+name = "adler32_combine_ticked_funspec"
+plain = "adler32_combine_funspec"
+gives_generated = "adler32_combine_ticked_gives_generated"
+from_generated = "adler32_combine_generated_gives_ticked"
+two_forms = "adler32_combine_two_forms"
+
+[[ticked]]
+name = "adler32_combine64_ticked_funspec"
+plain = "adler32_combine64_funspec"
+gives_generated = "adler32_combine64_ticked_gives_generated"
+from_generated = "adler32_combine64_generated_gives_ticked"
+two_forms = "adler32_combine64_two_forms"
+
+# The contracts with ticks for one kind of buffer argument each.
+
+[[derived]]
+name = "adler32_z_null_ticked_spec"
+from = "adler32_z_ticked_contract"
+by = "adler32_z_ticked_contract_gives_null"
+
+[[derived]]
+name = "adler32_z_buffer_ticked_spec"
+from = "adler32_z_ticked_contract"
+by = "adler32_z_ticked_contract_gives_buffer"
+
+[[derived]]
+name = "adler32_z_empty_ticked_spec"
+from = "adler32_z_ticked_contract"
+by = "adler32_z_ticked_contract_gives_empty"
+
+# What the form with ticks adds to a precondition.
+
+[[definition]]
+name = "with_ticks"
+file = "proofs/lib/TickLogic.v"
+text = '''
+Definition with_ticks {cs : compspecs} (sig : compcert_rmaps.typesig)
+    (cc : calling_convention) (A : Type) (cost : A -> Z)
+    (P : A -> argsEnviron -> mpred) (Q : A -> environ -> mpred) : funspec :=
+  NDmk_funspec sig cc (A * globals * Z)
+    (fun '(w, gv, t) gargs =>
+       !! (cost w <= t <= Int64.max_unsigned) &&
+       (P w gargs * GLOBALSx [gv] (SEPx [ticks gv t]) gargs)%logic)
+    (fun '(w, gv, t) rho =>
+       EX used : Z,
+       !! (0 <= used <= cost w) && (Q w rho * ticks gv (t - used))%logic)
+'''
+
+[[definition.clause]]
+text = "P w gargs"
+verdict = "nothing"
+reason = "The precondition of the plain contract, unchanged. It is reviewed under that contract, and the form with ticks adds nothing to what it asks about the arguments or the memory."
+
+[[definition.clause]]
+text = "cost w <= t <= Int64.max_unsigned"
+verdict = "ticks"
+reason = "The counter holds at least the cost bound of the call, and its value fits the counter's type. A tick with the counter at zero is a stuck state, so this is what makes the proof show that the bound holds."
+caller = "A proof about a caller sets the counter before the call, or passes on enough of its own budget. The cost depends only on what the caller knows: whether the buffer is null, and the length."
+
+[[definition.clause]]
+text = "GLOBALSx [gv] (SEPx [ticks gv t]) gargs"
+verdict = "ticks"
+reason = "The caller owns the counter, a global variable, and lends it for the call. It comes back holding what was not spent."
+caller = "The counter is touched only by ticks, so a caller that is itself instrumented holds it."
+
+[[definition]]
+name = "ticks"
+file = "proofs/lib/TickLogic.v"
+text = '''
+Definition ticks {cs : compspecs} (gv : globals) (t : Z) : mpred :=
+  data_at Ews tulong (Vlong (Int64.repr t)) (gv _fvz_ticks)
+'''
+
+[[definition.clause]]
+text = "data_at Ews tulong (Vlong (Int64.repr t)) (gv _fvz_ticks)"
+verdict = "ticks"
+reason = "The counter is one `unsigned long`, owned whole, holding `t`."
 
 # ---------------------------------------------------------------------------
 # The buffer argument of adler32_z and adler32

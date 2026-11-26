@@ -8,7 +8,8 @@
 
 From compcert Require Import Coqlib AST Ctypes Globalenvs Clight.
 From Stdlib Require Import List Lia.
-Require Import adler32 adler32_ticked Ticks TickStatements TickBound.
+From fvzlib.proofs.lib Require Import Ticks.
+Require Import adler32 adler32_ticked TickStatements TickBound.
 Import ListNotations.
 Local Open Scope nat_scope.
 

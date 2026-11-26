@@ -1,10 +1,10 @@
 # Analyses and transformations over Clight syntax trees, shared by the
-# proofs.  Needs the pinned toolchain.  No VST is needed for these files.
+# proofs.  Needs the pinned toolchain.  Only TickLogic needs VST.
 #
 #   make        compile
 #   make clean  remove build products
 
-FILES := Census Guard
+FILES := Census Guard Ticks TickLogic
 
 .PHONY: all clean
 all:

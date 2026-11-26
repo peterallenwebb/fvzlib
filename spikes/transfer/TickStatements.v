@@ -1,6 +1,6 @@
 (** * The two theorems about tick instrumentation, stated
 
-    [Ticks.v] adds a counter to a function.  A VST proof about the
+    [proofs/lib/Ticks.v] adds a counter to a function.  A VST proof about the
     instrumented function shows that the counter never runs out.  Two
     theorems are needed to turn that into a statement about the original
     program.  This file states both, in terms of CompCert's semantics of
@@ -18,7 +18,7 @@
 From compcert Require Import Coqlib Integers AST Ctypes Cop Values Memory
   Events Globalenvs Smallstep Behaviors Clight Clightdefs.
 From Stdlib Require Import List.
-Require Import Ticks.
+From fvzlib.proofs.lib Require Import Ticks.
 Import ListNotations.
 Local Open Scope nat_scope.
 

@@ -5,6 +5,14 @@ CompCert 3.18, and VST 2.17. Run again on 2026-11-25 on the project's first
 target, x86-64 Linux, in the toolchain container, where every file checks.
 Exploratory. Not part of the main build.
 
+On 2026-11-26 the main proofs took over what this spike began. In
+`proofs/adler32`, each of the five functions with ticks is proven to meet
+one contract that covers memory safety, the value returned, and the cost
+bound, for every call including a null buffer and a buffer of length zero.
+The instrumentation moved to `proofs/lib/Ticks.v`. The files here are kept
+as the record of the spike. Their contracts say less: cost and memory
+safety only, for a buffer that is not null and not empty.
+
 ## The question
 
 Can the tick counter give a proven cost bound for real zlib code, and what
@@ -137,4 +145,4 @@ rests on it as a stated assumption.
 | `verif_combine_cost.v` | The cost contracts for the three combine functions |
 | `adler32_bound.v` | The step bound for a program made of the five instrumented functions |
 
-The tick instrumentation itself is `../transfer/Ticks.v`.
+The tick instrumentation itself is `../../proofs/lib/Ticks.v`.

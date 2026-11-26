@@ -6,7 +6,7 @@
     These lemmas split the buffer and put it back together. *)
 
 Require Import VST.floyd.proofauto.
-Require Import Ticks.
+From fvzlib.proofs.lib Require Import Ticks.
 
 Section BufferLemmas.
 Context {cs : compspecs}.

@@ -38,7 +38,7 @@ is the fallback the README anticipated.
 | `GotoElim.v` | The goto transformation, with its side conditions | Computes |
 | `toy_nogoto.v` | The transformation applied to the toy | The result is goto-free |
 | `verif_toy_nogoto.v` | A VST contract for the transformed toy | Proven |
-| `Ticks.v` | The tick instrumentation and its erasure | Computes |
+| `../../proofs/lib/Ticks.v` | The tick instrumentation and its erasure. It was written here and moved to the shared library on 2026-11-26 | Computes |
 | `toy_ticked.v` | The instrumentation applied to the transformed toy | Erasure gives back the input exactly |
 | `verif_toy_ticked.v` | A VST cost contract for the instrumented toy | Proven |
 | `Transfer.v` | Where the goto goes in CompCert's semantics | Proven, no axioms |

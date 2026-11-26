@@ -7,6 +7,8 @@ They prove nothing by themselves.
 |---|---|
 | `Census.v` | Lists the arithmetic in a function that VST does not check |
 | `Guard.v` | Inserts a test in front of each open census item, so that a VST proof has to show the bad operand values never arise |
+| `Ticks.v` | Adds a counter that is spent on entry to a function and at the start of each loop iteration, and removes it again |
+| `TickLogic.v` | How a VST contract speaks of that counter, and `with_ticks`, which makes the form with ticks of a contract. The one file here that needs VST and proves nothing about a program. |
 
 ## The census
 
@@ -58,6 +60,27 @@ computed with the names in the function left folded, so it stays readable.
 
 That removing the guards does not change the behavior of a program that
 never gets stuck is an unproven obligation, recorded in the ledger as T0003.
+
+## The ticks
+
+`Ticks.v` adds a counter to a function. One tick is spent on entry and one
+at the start of every loop iteration. A tick with the counter at zero jumps
+to a label that does not exist, which is a stuck state, so a VST proof about
+the function with ticks shows that the counter never runs out. `erase_ticks`
+removes the counter again.
+
+`TickLogic.v` is the other half. `ticks gv t` says the counter holds `t`.
+`with_ticks` takes the precondition and postcondition of a contract and a
+cost, and gives the contract's form with ticks: the same precondition with a
+counter holding at least the cost beside it, and the same postcondition with
+the counter holding what was not spent. A contract and its form with ticks
+therefore differ in the counter and in nothing else.
+
+The instrumentation began in the contract transfer spike and moved here on
+2026-11-26, when the Adler-32 proofs came to depend on it. What a proof
+about a function with ticks implies for the function without them rests on
+two theorems, stated in `spikes/transfer/TickStatements.v`. One is proven.
+The other is ledger entry T0002.
 
 ## A preview for the whole library
 

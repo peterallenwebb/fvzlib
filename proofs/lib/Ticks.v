@@ -1,4 +1,4 @@
-(** * Spike: tick instrumentation
+(** * Tick instrumentation
 
     A transformation on Clight functions that adds a counter.  One tick is
     spent on entry to the function and one at the start of every loop
@@ -9,9 +9,11 @@
     VST can prove a goto only when it is unreachable.  So a VST proof about
     an instrumented function shows that the counter never runs out.
 
-    This file contains the transformation only.  What a VST proof about the
-    instrumented code implies for the original is discussed in
-    [Transfer.v]. *)
+    This file contains the transformation only.  It began in the contract
+    transfer spike.  What a VST proof about the instrumented code implies
+    for the original is discussed in [spikes/transfer/Transfer.v], and the
+    two theorems that question needs are stated in
+    [spikes/transfer/TickStatements.v]. *)
 
 From compcert Require Import Coqlib Integers AST Ctypes Cop Clight Clightdefs.
 From Stdlib Require Import List String.

@@ -5,11 +5,11 @@
 | Kind | Transformation obligation |
 | Status | Two statements. The first is proven. The second is stated in Rocq and unproven. Anything that relies on the second rests on it as a stated assumption. |
 | Recorded | 2026-11-24 |
-| Updated | 2026-11-25: both statements written in Rocq, the first proven |
+| Updated | 2026-11-25: both statements written in Rocq, the first proven. 2026-11-26: what relies on it |
 
 ## The transformation
 
-Ticks.v in spikes/transfer adds a counter that is spent on function entry and at the start of each loop iteration, with a jump to a missing label when it runs out.
+Ticks.v in proofs/lib adds a counter that is spent on function entry and at the start of each loop iteration, with a jump to a missing label when it runs out.
 
 ## The obligation
 
@@ -41,11 +41,13 @@ Its limits as stated:
 
 ## What relies on it
 
-The cost bounds for all five functions of adler32.c in spikes/termination. Without the second statement those bounds are bounds on instrumented code only.
+The cost bounds for all five functions of adler32.c. Since 2026-11-26 they are part of the contracts with ticks in proofs/adler32/CostContract.v, proven for the instrumented functions. Without the second statement those bounds are bounds on instrumented code only.
+
+The claim for adler32.c, in claims/adler32.md, does not rely on this entry, because it says nothing about cost.
 
 ## Evidence so far
 
-Cost contracts are proven in VST for the instrumented functions of adler32.c. Erasing the ticks gives back the original function bodies exactly, checked by computation. The five instrumented functions have the form the first statement asks for, checked in spikes/termination/adler32_bound.v, and the largest has size 689.
+Contracts that cover memory safety, the value returned, and the cost are proven in VST for the instrumented functions of adler32.c. Erasing the ticks gives back the original function bodies exactly, checked by computation. The five instrumented functions have the form the first statement asks for, checked in spikes/termination/adler32_bound.v, and the largest has size 689.
 
 ## What a proof of the second statement would take
 

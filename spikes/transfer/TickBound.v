@@ -20,7 +20,8 @@
 From compcert Require Import Coqlib Integers AST Ctypes Cop Values Memory
   Events Globalenvs Smallstep Clight Clightdefs.
 From Stdlib Require Import List Lia.
-Require Import Ticks TickStatements.
+From fvzlib.proofs.lib Require Import Ticks.
+Require Import TickStatements.
 Import ListNotations.
 Local Open Scope nat_scope.
 

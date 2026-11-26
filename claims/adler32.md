@@ -227,9 +227,12 @@ whether the proofs mean what they seem to.
 1. **Termination and cost.** The claim says nothing about whether a call
    returns, or how long it takes. What exists:
    - Cost bounds are proven for copies of the five functions with a
-     counter added: `len/5552 + len/16 + 19` ticks for `adler32_z` with a
-     buffer that is not null and not empty, one more for `adler32`, and 2
-     for the combine functions.
+     counter added, for every call the claim covers: 1 tick for
+     `adler32_z` with a null buffer, `len/5552 + len/16 + 19` with a
+     buffer of `len` bytes, one more for `adler32`, and 2 for the combine
+     functions. The same proofs show that these copies return what the
+     functions as shipped are proven to return. One theorem states it for
+     the file: `adler32_c_verified_with_ticks`.
    - That few ticks mean few steps is proven.
    - That removing the counter leaves the behavior unchanged is stated and
      not proven. See [T0002](../ledger/T0002-tick-instrumentation.md).
@@ -286,7 +289,7 @@ tools/in-container.sh make full
 
 That builds the container, applies the patch, runs the build check and the
 differential test, checks every proof, prints what each proof depends on,
-and checks the references in this file. It takes about six minutes after
+and checks the references in this file. It takes about eight minutes after
 the container is built. Mutation testing is separate, and takes much
 longer:
 

@@ -5,8 +5,12 @@ A review file lists every clause of the precondition of every contract in
 one directory of C proofs, with a verdict and a reason for each.  This
 tool keeps the review in step with the contracts.  It checks that:
 
-  * every contract defined in the directory is either reviewed, or listed
-    as derived from a reviewed contract by a lemma that exists;
+  * every contract defined in the directory is reviewed, or listed as
+    derived from a reviewed contract by a lemma that exists, or listed as
+    the form with ticks of a reviewed contract;
+  * for a form with ticks, the lemmas exist that tie it to the reviewed
+    contract: that it and the generated form follow from each other, and
+    that the generated form is made from the reviewed contract;
   * the clauses of each reviewed contract, read from its Rocq source, are
     exactly the clauses the review lists, in the same order;
   * each definition a clause refers to is reviewed, and the text of the
@@ -38,6 +42,7 @@ VERDICTS = {
     "needed": "the code cannot do without it",
     "promise": "a condition on the promised result, not on the call",
     "limit": "stricter than C requires: a limit of the tools",
+    "ticks": "about the counter that only the function with ticks has",
 }
 ASKS_CALLER = {"needed", "promise", "limit"}
 PARTS = ("PROP", "PARAMS", "GLOBALS", "SEP")
@@ -170,22 +175,37 @@ def check(path):
     definitions = {d["name"]: d for d in review.get("definition", [])}
     reviewed = {c["name"]: c for c in review.get("contract", [])}
     derived = {d["name"]: d for d in review.get("derived", [])}
+    ticked = {d["name"]: d for d in review.get("ticked", [])}
     counts = dict.fromkeys(VERDICTS, 0)
 
     for name in sorted(defined):
-        if name not in reviewed and name not in derived:
+        if name not in reviewed and name not in derived and name not in ticked:
             errors.append(f"{defined[name][0]}: contract {name} is not reviewed")
-    for name in sorted(set(reviewed) | set(derived)):
+    for name in sorted(set(reviewed) | set(derived) | set(ticked)):
         if name not in defined:
             errors.append(f"{name}: no such contract in {review['directory']}")
 
+    def proven(name):
+        pattern = re.compile(RESULT % re.escape(name or "?"), re.M)
+        return any(pattern.search(t) for t in proof_texts.values())
+
     for name, entry in derived.items():
-        if entry.get("from") not in reviewed:
+        if entry.get("from") not in reviewed and entry.get("from") not in ticked:
             errors.append(f"{name}: derived from {entry.get('from')!r}, "
                           "which is not a reviewed contract")
-        pattern = re.compile(RESULT % re.escape(entry.get("by", "?")), re.M)
-        if not any(pattern.search(t) for t in proof_texts.values()):
+        if not proven(entry.get("by")):
             errors.append(f"{name}: no lemma named {entry.get('by')!r}")
+
+    for name, entry in ticked.items():
+        if entry.get("plain") not in reviewed:
+            errors.append(f"{name}: the form with ticks of "
+                          f"{entry.get('plain')!r}, which is not reviewed")
+        if "with_ticks" not in definitions:
+            errors.append(f"{name}: the review does not cover with_ticks")
+        for key in ("gives_generated", "from_generated", "two_forms"):
+            if not proven(entry.get(key)):
+                errors.append(f"{name}: no lemma named {entry.get(key)!r} "
+                              f"for `{key}`")
 
     for name, entry in reviewed.items():
         if name not in defined:
@@ -233,7 +253,8 @@ def check(path):
 
     shown = path.relative_to(ROOT)
     print(f"preconditions: {shown}: {len(reviewed)} contracts reviewed, "
-          f"{len(derived)} derived from them, {len(definitions)} definitions")
+          f"{len(ticked)} forms with ticks, {len(derived)} derived from "
+          f"them, {len(definitions)} definitions")
     print("preconditions: verdicts: "
           + ", ".join(f"{counts[v]} {v}" for v in VERDICTS if counts[v]))
     for error in errors:

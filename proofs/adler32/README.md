@@ -58,6 +58,64 @@ Every proof rests on VST's standard axioms only. The build checks that:
 `tools/check_axioms.py` requires every axiom printed to be one of the six in
 `audit/allowed-axioms.txt`.
 
+## Cost: the form with ticks
+
+Each contract also exists in a form with ticks, in `CostContract.v`. It is
+a contract for the function with a counter added. It says everything the
+plain contract says, and also that the call spends at most a stated number
+of ticks. One tick is spent on entry to a function and one at each test of
+a loop condition, including the last test, which fails.
+
+| Function | Bound in ticks |
+|---|---|
+| `adler32_z`, null buffer | 1 |
+| `adler32_z`, a buffer of `len` bytes | `len/5552 + len/16 + 19` |
+| `adler32` | One more than `adler32_z` |
+| Internal combine function | 1 |
+| `adler32_combine`, `adler32_combine64` | 2 |
+
+What is proven, checked on 2026-11-26:
+
+- **The functions with ticks meet these contracts**, for every call the
+  plain contracts cover: a null buffer, a buffer of length zero, and a run
+  of bytes inside a larger array. Each proof establishes memory safety, the
+  value returned, and the cost bound together. The functions are computed
+  from the translated source by the instrumentation in `proofs/lib/Ticks.v`,
+  and removing the ticks gives back each original body exactly.
+- **The two forms come from one definition.** `with_ticks`, in
+  `proofs/lib/TickLogic.v`, makes the form with ticks from the precondition
+  and postcondition of a plain contract. It adds a counter that holds at
+  least the cost before the call, and holds what was not spent after it.
+  For each function, a lemma named `..._two_forms` states that the plain
+  contract and the generated one are made of the same precondition and
+  postcondition.
+- **Each form is also written out by hand**, so that it can be read and
+  used in the proof of a caller. Each written contract and its generated
+  one are proven to follow from each other.
+- **One theorem covers the file**: `adler32_c_verified_with_ticks`, in
+  `WholeFile.v`. For every function the translated file defines, the
+  instrumented function meets its contract with a cost bound.
+
+The limits:
+
+- **These are contracts for instrumented code.** That the functions as
+  shipped take a bounded number of steps does not follow yet. It needs the
+  second theorem of ledger entry T0002, which is stated and not proven,
+  and it needs these contracts to be joined to VST's soundness theorem.
+  There is still no theorem that any call terminates.
+- **The bound is an upper bound.** A buffer of length zero spends 2 ticks,
+  and its bound is 19, the value of the formula at zero. A buffer of one
+  byte spends 1.
+- **The proofs repeat the plain ones.** The proof for `adler32_z` with
+  ticks follows `Verif.v` step by step, with one more clause in each loop
+  invariant and one more step for each tick. We do not yet have a way to
+  run one proof script against both forms. A change to the function has
+  to be made in both.
+- **Checking both directions mattered.** A first version of `with_ticks`
+  dropped the arguments of the call. Its generated contracts could never
+  be met, so every written contract implied them trivially. The converse
+  lemma failed and showed the error.
+
 ## One contract per function
 
 `Contract.v` holds the contract a caller should use. It describes the buffer
@@ -145,11 +203,19 @@ precondition, or one part of a definition it uses.
 |---|---|---|
 | type | 13 | Only gives an argument its C type. Every value of the type meets it. |
 | names | 14 | Only says which value is passed as which argument. |
-| nothing | 7 | Asks nothing of the caller. |
+| nothing | 8 | Asks nothing of the caller. |
 | defined | 6 | Refers to a definition that is reviewed under its own name. |
 | needed | 5 | The code cannot do without it. |
 | promise | 4 | A condition on the promised result. The call is safe without it. |
 | limit | 2 | Stricter than C requires, because of a limit of the tools. |
+| ticks | 3 | About the counter that only a function with ticks has. |
+
+The forms with ticks are not reviewed clause by clause. Each is tied to its
+plain contract by the three lemmas described under "Cost: the form with
+ticks", and the tool checks that those lemmas exist. What `with_ticks` adds
+to a precondition is reviewed once: the counter holds at least the cost,
+and the caller owns it. Those are the three clauses marked "ticks". They
+ask nothing of a caller of the function as shipped, which has no counter.
 
 What the caller of `adler32_z` or `adler32` must ensure comes to this, the
 five clauses that are needed:
@@ -214,8 +280,9 @@ The limits of the review:
 - **Conditions that are not clauses are not in the review.** A VST contract
   says nothing about how deep the stack may grow. And every contract here
   is for this target, where `unsigned long` has 64 bits.
-- **The cost contracts are not reviewed.** They are in `spikes/termination`,
-  for instrumented code, and cover fewer calls than the contracts here.
+- **The cost functions are not reviewed as preconditions.** The review
+  covers what `with_ticks` asks. Whether each bound is the right one is a
+  matter for the postcondition and the proof.
 
 ## What is not proven here
 
@@ -225,10 +292,9 @@ The limits of the review:
 - **A 32-bit range for the combine functions.** Their contract does not
   promise that the result fits in 32 bits. For arguments that are not
   checksums it need not, and the manual promises nothing for those.
-- **Cost.** These contracts have no cost clause. Cost bounds for all five
-  functions are proven separately, for instrumented code, in
-  `spikes/termination`. The design calls for each contract to exist in two
-  forms from one definition, with and without ticks. That is not built.
+- **Termination of the code as shipped.** The cost bounds are proven for
+  the functions with ticks. See "Cost: the form with ticks" for what is
+  still needed to carry them to the functions without.
 - **A theorem about executions.** `WholeFile.v` puts the five proofs into
   one statement, `adler32_c_verified`: every function the file defines
   meets its contract when the functions it calls meet theirs. That is the
@@ -350,9 +416,10 @@ The limits:
   than swapping `adler` and `sum2`.
 - **Only this configuration.** The `NO_DIVIDE` code is not compiled, so its
   66 mutants were not tested.
-- **Only the contracts in this directory.** The cost bounds in
-  `spikes/termination` are proven for instrumented copies of the code and
-  were not tested this way.
+- **The contracts with a cost bound were tested on 93 mutants only.** They
+  were added after the full runs. A mutant that changes how often a loop
+  runs would have to be killed by them or by the plain proofs, and in the
+  full runs the plain proofs killed every such mutant first.
 - **No historical vulnerability to reintroduce.** The project plans to
   reintroduce each fixed vulnerability as a mutant. We know of none in
   `adler32.c`. The nearest is our own finding F0001, and the file without
@@ -365,6 +432,12 @@ the first file that fails, so the 521 are killed as before. As a check, 93
 mutants were run again: the 4 survivors, the file without our patch, and
 every mutant in the first part of `adler32_z`. The same 4 survive and the
 other 83 that compile are killed.
+
+Later that day the proofs for the functions with ticks were added, which
+are five more files a mutant has to pass. The same 93 were run again, with
+the same result. The 4 survivors pass the proofs with ticks too, as they
+must: two are the same program, and two change a value the contracts do
+not fix. None of them changes how many ticks are spent.
 
 To repeat the run, after `make check` and `make proofs`:
 
@@ -397,7 +470,12 @@ The full list, one line per mutant, is written to
 | `Combine.v` | The contracts and proofs for the combine functions. |
 | `CensusAdler32.v` | The census for this file, pinned as checked statements. |
 | `CombineGuarded.v` | The proof that closes the one open census item. |
-| `WholeFile.v` | One statement for the whole file: every function it defines meets its contract. The claim in `claims/adler32.md` names it. |
+| `Ticked.v` | The five functions with ticks added, computed, and the checks that removing the ticks gives back the originals. |
+| `CostContract.v` | The contracts with a cost bound, written out and generated. Definitions only. |
+| `VerifTicked.v` | The proofs for `adler32_z` with ticks, one for each kind of buffer argument. |
+| `CombineTicked.v` | The proofs for the combine functions with ticks. |
+| `CostContractProof.v` | The single contract with ticks of `adler32_z` and of `adler32`, the proofs that written and generated contracts say the same, and the `two_forms` lemmas. |
+| `WholeFile.v` | One statement for the whole file: every function it defines meets its contract. The claim in `claims/adler32.md` names it. A second statement says the same of the functions with ticks. |
 
 Three points about the argument:
 
@@ -431,4 +509,4 @@ make check
 make -C proofs/adler32
 ```
 
-The second command takes about two minutes.
+The second command takes about five minutes.

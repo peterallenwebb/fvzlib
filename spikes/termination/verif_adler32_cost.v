@@ -8,7 +8,8 @@
       before each call.  The client needs no budget from its own caller. *)
 
 Require Import VST.floyd.proofauto.
-Require Import adler32 Ticks adler32_ticked Buffer verif_adler32_z_cost.
+From fvzlib.proofs.lib Require Import Ticks.
+Require Import adler32 adler32_ticked Buffer verif_adler32_z_cost.
 
 Definition adler32_cost (len : Z) : Z := adler32_z_cost len + 1.
 

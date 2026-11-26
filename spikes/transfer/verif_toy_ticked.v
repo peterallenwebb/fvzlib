@@ -6,7 +6,8 @@
     [n0 + 2]: one on entry and one at the start of each loop iteration. *)
 
 Require Import VST.floyd.proofauto.
-Require Import toy toy_nogoto Ticks toy_ticked.
+From fvzlib.proofs.lib Require Import Ticks.
+Require Import toy toy_nogoto toy_ticked.
 Require Import verif_toy_nogoto.
 
 (** The counter is a global, so it has to be in the variable specifications. *)

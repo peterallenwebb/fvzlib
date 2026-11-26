@@ -31,7 +31,9 @@ gcc builds it, pristine and patched, on about five thousand inputs in every
 full build. Of the two theorems that the cost method needs, one is proven
 and the other is stated and not proven. Every precondition of the Adler-32
 contracts is reviewed, and the build fails if one changes without its
-review.
+review. Each contract also has a form with a cost bound, proven for the
+function with a tick counter added. That does not yet give a theorem that
+the functions as shipped terminate.
 
 The claim for this one file is written out in
 [claims/adler32.md](claims/adler32.md), with what it rests on and what it
@@ -684,6 +686,13 @@ Result of the termination spike, run 2026-11-24 and described in
   behavior is a simulation across differing memories, estimated at one to two
   thousand lines, and is the larger risk. On 2026-11-25 both were stated
   in Rocq and the first was proven. See criterion 6 under Milestone 1.
+- **Since 2026-11-26 the cost bound and the value are proven together.**
+  The main proofs in `proofs/adler32` now hold one contract for each
+  function with ticks, covering memory safety, the value returned, and the
+  cost, for every call. The spike's contracts covered cost and memory
+  safety only. Adding the ticks to the full proof of `adler32_z` took one
+  more clause in each loop invariant and one more step for each tick, as
+  the spike had found for the smaller proof.
 
 Risks:
 
@@ -765,7 +774,13 @@ Two further observations from that run:
   flag of `gzopen` is compiled. Under the strict ISO dialects it is not,
   because the C library then hides `O_CLOEXEC`.
 
-The script for this check is not in the repository yet.
+The script for this check is `tools/measure_editions.py`, added on
+2026-11-26. It preprocesses each of the fifteen files with the upstream
+build's own command under five ISO editions and gcc's five GNU dialects,
+and reports which give the same tokens. Run in the container that day, it
+gave the result above: eleven files are the same under all ten, and
+`zutil.c`, `gzlib.c`, `gzwrite.c`, and `gzread.c` differ as described. It
+is a measurement and not a check, and `make full` does not run it.
 
 Consequences:
 
@@ -1011,7 +1026,9 @@ ones. The draft contracts are in
   empty has to be readable.
 - **Each contract has two forms from one definition.** With ticks, which is
   what VST proves about the instrumented code. Without ticks, which is what a
-  downstream verifier imports for the real code.
+  downstream verifier imports for the real code. Built on 2026-11-26: the
+  plain contract is the one definition, and a function, `with_ticks`, makes
+  the form with ticks from its precondition and postcondition.
 - **Memory is untouched.** Buffers come back as given, under the same share.
 
 Why the buffer is described this way: VST's ordinary contract form rejects a
@@ -1464,6 +1481,54 @@ Progress on 2026-11-26:
     two places where the file uses arithmetic that VST does not check.
   - **The objective asks for one sentence.** The claim takes three, so
     that the limits are in the part a dependent would quote.
+
+- **Criterion 4, met: every contract has its form with ticks.** The five
+  contracts with a cost bound are in `proofs/adler32/CostContract.v`, and
+  the functions with a tick counter added are proven to meet them. See
+  [proofs/adler32/README.md](proofs/adler32/README.md#cost-the-form-with-ticks).
+  - **One proof now gives all three parts.** For each function with ticks,
+    one contract covers memory safety, the value returned, and the number
+    of ticks spent. Until now the cost bounds were proven apart, in the
+    termination spike, with no claim about the value.
+  - **Every call is covered.** The spike's bounds held for a buffer that
+    is not null and not empty. The contracts now cover a null buffer, at 1
+    tick, a buffer of length zero, and a run of bytes inside a larger
+    array. The bound for a buffer of `len` bytes is unchanged:
+    `len/5552 + len/16 + 19`.
+  - **Two forms from one definition.** `with_ticks`, in
+    `proofs/lib/TickLogic.v`, makes the form with ticks from the
+    precondition and postcondition of a plain contract. For each function,
+    a lemma states that its plain contract and its generated contract are
+    made of the same two. Each form with ticks is also written out, since
+    VST's tactics need that, and is proven to follow from the generated
+    one and to imply it.
+  - **Proving both directions caught an error.** A first version of
+    `with_ticks` dropped the arguments of the call, so its contracts could
+    never be met. Every written contract implied them trivially. The
+    converse failed.
+  - **One theorem for the file.** `adler32_c_verified_with_ticks` says
+    that for every function the translated file defines, the instrumented
+    function meets its contract with a cost bound.
+  - **The instrumentation is now a library file.** `Ticks.v` moved from
+    the transfer spike to `proofs/lib`. The spikes use it from there.
+  - **The review of preconditions covers the new contracts.** A form with
+    ticks is tied to its reviewed plain contract by three lemmas, which
+    the tool requires. What `with_ticks` adds is reviewed once, in 4
+    clauses, 3 of them about the counter. The review now has 55 clauses.
+  - **Mutation testing was repeated in part.** The same 93 mutants as
+    earlier in the day were checked against the enlarged set of proofs.
+    The same 4 survive and the other 83 that compile are killed.
+  - **Limits.** These are contracts for instrumented code. Carrying the
+    bound to the functions as shipped needs the unproven half of T0002 and
+    the join to VST's soundness theorem, so there is still no theorem that
+    a call terminates. The proofs with ticks repeat the plain proofs step
+    by step, since we cannot yet run one script against both forms. And
+    the claim for `adler32.c` still says nothing about cost.
+- **With that, nothing is left on the list of work agreed for this
+  milestone.** Whether the milestone is closed has not been decided. What
+  stays open inside the criteria is listed in the claim and in the entries
+  above: the second tick theorem, the join to VST's soundness theorem, and
+  the two transformation obligations T0001 and T0003.
 
 ### Milestone 2: the inflate reference model
 

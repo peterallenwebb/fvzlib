@@ -1,7 +1,8 @@
 (** The Adler-32 functions of patched zlib 1.4 with ticks added.  Computed
     from the output of clightgen, not written by hand. *)
 From compcert Require Import Coqlib Integers AST Ctypes Clight Clightdefs.
-Require Import adler32 Ticks.
+From fvzlib.proofs.lib Require Import Ticks.
+Require Import adler32.
 
 (** The names listed are left folded, so the result stays readable.  They
     are the identifiers of this source file.  CompCert's built-in functions

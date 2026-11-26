@@ -6,7 +6,8 @@
     non-empty buffer. *)
 
 Require Import VST.floyd.proofauto.
-Require Import adler32 Ticks adler32_ticked Buffer.
+From fvzlib.proofs.lib Require Import Ticks.
+Require Import adler32 adler32_ticked Buffer.
 
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog_ticks : varspecs := [(_fvz_ticks, tulong)].

@@ -1,7 +1,8 @@
 (** The goto-free toy function with ticks added.  Computed, not written by
     hand. *)
 From compcert Require Import Coqlib Integers AST Ctypes Clight Clightdefs.
-Require Import toy toy_nogoto Ticks.
+From fvzlib.proofs.lib Require Import Ticks.
+Require Import toy toy_nogoto.
 
 Definition f_count_down_ticked : function :=
   ltac:(let r := eval cbv -[_n _stop _out _steps _fvz_ticks _fvz_t

@@ -9,7 +9,7 @@
 # exploratory and is not part of `make check` at the top.
 
 PATCHED := ../../build/zlib-patched
-FLAGS   := -Q . "" -Q ../transfer ""
+FLAGS   := -Q . "" -Q ../transfer "" -Q ../../proofs/lib fvzlib.proofs.lib
 include ../../proofs/zlib.mk
 DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32 adler32_ticked Buffer verif_adler32_z_cost verif_adler32_cost \

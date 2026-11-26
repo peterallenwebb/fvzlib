@@ -8,12 +8,16 @@ review of preconditions: see "The buffer argument" below.
   form without ticks, with the buffer argument described below. They are in
   `proofs/adler32/Contract.v`, under the names `adler32_z_contract` and
   `adler32_contract`, and proven in `ContractProof.v`.
-- **Proven in the termination spike:** the cost bounds in the table below,
-  for instrumented code.
-- **Not built:** the form with ticks of each contract, and the generation
-  of both forms from one definition. The draft at the end of this note is
-  that form with ticks. It is kept as written on 2026-11-24, and nothing
-  has been proven against it.
+- **Built and proven on 2026-11-26:** the form with ticks of each of the
+  five contracts, in `proofs/adler32/CostContract.v`, for the functions
+  with a counter added. Each covers memory safety, the value returned, and
+  the cost bound, for every call the plain contract covers.
+- **Two forms from one definition, built on 2026-11-26.** See "Two forms
+  from one definition" below for how it was done, which is not quite as
+  first drafted.
+- **The draft at the end of this note** is kept as written on 2026-11-24.
+  The contracts as built differ from it in the buffer argument, in the
+  cost of a null buffer, and in the cost formula.
 
 The decision itself is recorded in the README under "Layer 3 contracts".
 
@@ -68,9 +72,17 @@ condition, including the final test that fails.
 
 | Function | Bound in ticks | Status |
 |---|---|---|
-| `adler32_z` | len/5552 + len/16 + 19 | Proven for the instrumented code in the termination spike, for a non-null, non-empty buffer |
-| `adler32` | one more than `adler32_z` | Proven in the same spike |
-| `adler32_combine`, `adler32_combine64` | 2 | Proven for the instrumented code in the termination spike, for any arguments |
+| `adler32_z`, null buffer | 1 | Proven for the instrumented code |
+| `adler32_z`, a buffer of `len` bytes | len/5552 + len/16 + 19 | Proven for the instrumented code, for every length including zero |
+| `adler32` | one more than `adler32_z` | Proven for the instrumented code |
+| Internal combine function | 1 | Proven for the instrumented code, for any arguments |
+| `adler32_combine`, `adler32_combine64` | 2 | Proven for the instrumented code, for any arguments |
+
+The bounds were first proven in the termination spike, for a buffer that
+is not null and not empty, and without any claim about the value returned.
+Since 2026-11-26 they are part of the contracts in `proofs/adler32`. The
+cost of a null buffer is stated as 1 and not by the formula, so that the
+precondition asks for no more ticks than the call can spend.
 
 An earlier version of this note proposed `1 + len/5552 + len/16 + 15` for
 `adler32_z`. That was three ticks too low, because it did not count the
@@ -84,6 +96,26 @@ form with ticks is what VST proves about the instrumented code. The form
 without ticks is what a downstream verifier imports for the real code. The
 draft below shows only the form with ticks, and uses a placeholder for the
 tick counter.
+
+As built on 2026-11-26:
+
+- **The plain contract is the one definition.** It stays written in VST's
+  ordinary notation, so that it can be read.
+- **`with_ticks` makes the other form.** It is a function, in
+  `proofs/lib/TickLogic.v`, from a precondition, a postcondition, and a
+  cost to a contract. A tactic takes the precondition and postcondition
+  out of the plain contract's definition and applies it. For each
+  function a lemma, `..._two_forms`, states that the plain contract and
+  the generated one are made of the same two.
+- **The form with ticks is also written out by hand.** VST's tactics for
+  proving a function, and for calling one, need a contract in its
+  ordinary notation, and a generated contract is not. So each form with
+  ticks is written out, and proven to follow from the generated one and
+  to imply it.
+
+What that gives: a function with ticks is proven to meet the contract that
+`with_ticks` makes from the plain contract. The two forms cannot differ in
+anything but the counter.
 
 ## Observations made while drafting
 
