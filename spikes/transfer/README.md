@@ -42,6 +42,8 @@ is the fallback the README anticipated.
 | `toy_ticked.v` | The instrumentation applied to the transformed toy | Erasure gives back the input exactly |
 | `verif_toy_ticked.v` | A VST cost contract for the instrumented toy | Proven |
 | `Transfer.v` | Where the goto goes in CompCert's semantics | Proven, no axioms |
+| `TickStatements.v` | The two theorems about ticks, stated against CompCert's semantics. Added 2026-11-25 | Definitions only |
+| `TickBound.v` | The first of the two: bounded ticks bound the steps. Added 2026-11-25 | Proven |
 
 The two VST proofs rest on VST's standard axioms only.
 
@@ -73,9 +75,56 @@ our behavior-preservation theorem to their final whole-program result. What
 they cannot have is a VST contract attached to the untransformed text of a
 function that contains a goto.
 
+## The two theorems about ticks
+
+Added on 2026-11-25. The ledger entry is
+[T0002](../../ledger/T0002-tick-instrumentation.md).
+
+`TickStatements.v` states both in Rocq. Each is a definition of a
+proposition, so stating it assumes nothing.
+
+**Bounded ticks bound the steps: proven.** Take a program in which every
+function is instrumented and has a body of size at most `K`. Start any of
+its functions. An execution that has spent `c` ticks has taken at most
+`K * (c + 1) + 2` steps. `TickBound.v` proves it.
+
+The proof gives each state a number, its potential. Every step lowers the
+potential, except entering a loop body or a function, which raises it by
+less than `K`. Each such step is followed at once by a tick, and no other
+can happen until that tick is spent. So each rise is paid for by one tick.
+The proof never looks at memory or at the value of the counter.
+
+Its limits:
+
+- **Steps of CompCert's semantics.** Not machine instructions. A call to an
+  external function is one step, whatever that function does.
+- **Every function instrumented, and no jumps.** A function with a goto
+  must have it removed first.
+- **It counts ticks spent.** How many an execution spends comes from the
+  cost contracts, which are statements in VST's logic. Joining the two
+  needs VST's soundness theorem and is not done.
+- **What it rests on.** `Print Assumptions` lists four of the six allowed
+  axioms, and two parameters of CompCert's semantics: what an external
+  function does and what inline assembly does. The statement alone, before
+  any proof, already lists the same four and two, because it speaks of
+  CompCert's semantics. The proof adds none. The two parameters are not
+  assumptions, and
+  [audit/semantics-parameters.txt](../../audit/semantics-parameters.txt)
+  says why.
+
+**Erasing the ticks preserves behavior: stated, not proven.** Take a
+program that does not use the names the instrumentation adds, and
+instrument it. If the instrumented program never goes wrong, every behavior
+of the original is a behavior of the instrumented one. No proof has been
+attempted, so the statement has not been tested by one and may need more
+side conditions. It does not cover a client that sets the counter again
+between calls.
+
 ## Open problems the spike exposed
 
-1. **The behavior-preservation theorems are not proven.** Each is a
+1. **The behavior-preservation theorems are not proven.** The one for
+   ticks is now stated in Rocq, in `TickStatements.v`. The one for goto is
+   still stated only in prose. Each is a
    simulation between two Clight programs, in the style of a CompCert
    compiler pass. For the goto transformation the side conditions are
    already written in `GotoElim.v`: the cleanup code must contain no jump,

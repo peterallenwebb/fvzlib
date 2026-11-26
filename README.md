@@ -28,7 +28,8 @@ patch in the patch sequence. Mutation testing of `adler32.c` is done: of 525
 small changes to the file, 521 make a proof fail, and the other 4 are
 explained. The reference model is also tested against the pinned zlib as
 gcc builds it, pristine and patched, on about five thousand inputs in every
-full build.
+full build. Of the two theorems that the cost method needs, one is proven
+and the other is stated and not proven.
 
 The work moved to the x86-64 Linux target on 2026-11-25. The target
 environment is a container, defined by one file, and one command runs every
@@ -42,7 +43,7 @@ the container from nothing.
 |---|---|
 | `spec/format/` | Layer 1. Format specifications. Standard library only. |
 | `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
-| `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, and `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason |
+| `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, `semantics-parameters.txt`, two names CompCert leaves undefined that a result about executions may mention, and `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason |
 | `trace/` | Traceability from source sentences to definitions and theorems |
 | `ledger/` | Findings about zlib, and obligations not yet proven, one file each |
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
@@ -669,7 +670,8 @@ Result of the termination spike, run 2026-11-24 and described in
 - **Both generic theorems remain unproven.** That bounded ticks bound the
   steps is a measure argument of a few hundred lines. That erasure preserves
   behavior is a simulation across differing memories, estimated at one to two
-  thousand lines, and is the larger risk.
+  thousand lines, and is the larger risk. On 2026-11-25 both were stated
+  in Rocq and the first was proven. See criterion 6 under Milestone 1.
 
 Risks:
 
@@ -1330,6 +1332,36 @@ Progress on 2026-11-25, the move to the first target:
   - **The Rocq side trusts more than the proofs do.** It is evaluated by
     Rocq's virtual machine, and reads its inputs from primitive strings.
     The specifications use neither.
+- **Criterion 6, met.** Both theorems about the tick instrumentation are
+  stated in Rocq, in `spikes/transfer/TickStatements.v`, against
+  CompCert's semantics of Clight. Each is a definition of a proposition,
+  so stating it assumes nothing. Their status is in ledger entry
+  [T0002](ledger/T0002-tick-instrumentation.md).
+  - **Bounded ticks bound the steps: proven.** In a program whose
+    functions are all instrumented, with bodies of size at most `K`, an
+    execution that has spent `c` ticks has taken at most `K * (c + 1) + 2`
+    steps. The proof is `spikes/transfer/TickBound.v`. For a program made
+    of the five instrumented functions of `adler32.c`, `K` is 689.
+  - **Erasing the ticks preserves behavior: stated, not proven.** No proof
+    has been attempted, so the statement has not been tested by one.
+  - **What the proven theorem does not give.** It counts steps of
+    CompCert's semantics, where a call to an external function is one
+    step. It needs every function instrumented and free of jumps. And it
+    is not yet joined to the cost contracts: those bound the ticks in
+    VST's logic, and the join needs VST's soundness theorem. So there is
+    still no theorem that a call to `adler32_z` terminates, for
+    instrumented or original code.
+  - **The axiom check learned a distinction.** The proven theorem speaks
+    of executions, so `Print Assumptions` lists two names that CompCert
+    declares without defining: what an external function does, and what
+    inline assembly does. They are parameters, not assumptions, and a
+    theorem that names them holds whatever they are. They are listed
+    apart, in `audit/semantics-parameters.txt`. The six allowed axioms are
+    unchanged. The statement alone already mentions everything the proven
+    theorem does, so the proof adds no axiom.
+  - **Not done under this criterion:** the corresponding theorem for goto
+    removal, T0001, and for arithmetic guards, T0003, are still stated
+    only in prose. Neither is one of the two this criterion names.
 
 ### Milestone 2: the inflate reference model
 
@@ -1383,7 +1415,8 @@ Listed roughly in order of consequence.
    compares assumption lists against allowed sets in two ways. The results
    listed in `audit/` must depend on no axioms. The C proofs and the
    spikes must depend only on the six axioms in
-   `audit/allowed-axioms.txt`.
+   `audit/allowed-axioms.txt`. A result about executions may also name
+   the two parameters in `audit/semantics-parameters.txt`.
 
 ## Planned spikes
 

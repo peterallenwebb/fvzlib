@@ -2,7 +2,7 @@
     compiles this file and requires each printed axiom to be in
     [audit/allowed-axioms.txt]. *)
 
-Require verif_adler32_z_cost verif_adler32_cost verif_combine_cost.
+Require verif_adler32_z_cost verif_adler32_cost verif_combine_cost adler32_bound.
 
 Print Assumptions verif_adler32_z_cost.body_adler32_z_cost.
 Print Assumptions verif_adler32_cost.body_adler32_cost.
@@ -10,3 +10,4 @@ Print Assumptions verif_adler32_cost.body_twice.
 Print Assumptions verif_combine_cost.body_combine_internal_cost.
 Print Assumptions verif_combine_cost.body_adler32_combine_cost.
 Print Assumptions verif_combine_cost.body_adler32_combine64_cost.
+Print Assumptions adler32_bound.adler32_steps_bounded.

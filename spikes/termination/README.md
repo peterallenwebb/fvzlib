@@ -93,7 +93,20 @@ programs whose memories differ by one block.
 
 ## What is still needed for a claim about the original code
 
-Two theorems, neither proven, both stated here in prose.
+Two theorems. On 2026-11-25 both were stated in Rocq, in
+`../transfer/TickStatements.v`, and the first was proven, in
+`../transfer/TickBound.v`. The second is not proven. See
+[the transfer spike](../transfer/README.md#the-two-theorems-about-ticks)
+and ledger entry T0002. The prose below is as written on 2026-11-24.
+
+`adler32_bound.v` applies the first theorem to this file's code. The five
+instrumented functions have the form the theorem asks for, and the largest,
+`adler32_z`, has size 689. So in a program made of these functions, an
+execution that has spent `c` ticks has taken at most `689 * (c + 1) + 2`
+steps. Together with the cost contract that would bound the steps of a call
+to `adler32_z` by a linear function of `len`. That last link is not made:
+the contract speaks of the counter's value in VST's logic, and the theorem
+counts steps of CompCert's semantics.
 
 1. **Bounded ticks bound the steps.** In an instrumented program every loop
    iteration and every function entry spends a tick. Between two ticks, only
@@ -110,8 +123,8 @@ Two theorems, neither proven, both stated here in prose.
    memories in the same way and is the model to follow. Estimated at one to
    two thousand lines. This is the larger risk.
 
-Until both are proven, a termination claim for the original code rests on
-them as stated assumptions.
+Until the second is proven, a termination claim for the original code
+rests on it as a stated assumption.
 
 ## Files
 
@@ -121,5 +134,7 @@ them as stated assumptions.
 | `Buffer.v` | Splitting and rejoining a byte buffer, and the tick tactics |
 | `verif_adler32_z_cost.v` | The cost contract for `adler32_z` and its proof |
 | `verif_adler32_cost.v` | The cost contract for `adler32`, and the refilling client |
+| `verif_combine_cost.v` | The cost contracts for the three combine functions |
+| `adler32_bound.v` | The step bound for a program made of the five instrumented functions |
 
 The tick instrumentation itself is `../transfer/Ticks.v`.

@@ -14,6 +14,9 @@
 #
 # Adding an entry widens what every proof is trusted on.  Treat it as a
 # change to the headline claim.
+#
+# semantics-parameters.txt, beside this file, lists two names that are not
+# assumptions and that a result about executions may mention.
 
 # Excluded middle.  Rocq standard library, Stdlib.Logic.Classical_Prop.
 Classical_Prop.classic : forall P : Prop, P \/ ~ P

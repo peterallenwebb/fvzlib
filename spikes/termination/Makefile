@@ -13,7 +13,7 @@ FLAGS   := -Q . "" -Q ../transfer ""
 include ../../proofs/zlib.mk
 DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32 adler32_ticked Buffer verif_adler32_z_cost verif_adler32_cost \
-           verif_combine_cost
+           verif_combine_cost adler32_bound
 
 .PHONY: all clean
 all: adler32.v

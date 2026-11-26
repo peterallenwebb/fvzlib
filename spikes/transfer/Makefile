@@ -9,7 +9,7 @@
 
 FLAGS := -Q . ""
 FILES := toy GotoElim toy_nogoto verif_toy_nogoto Ticks toy_ticked \
-         verif_toy_ticked Transfer
+         verif_toy_ticked Transfer TickStatements TickBound
 
 .PHONY: all clean
 all: toy.v

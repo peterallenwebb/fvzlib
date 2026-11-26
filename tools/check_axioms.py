@@ -6,7 +6,10 @@ The directory holds a file AxiomAudit.v that prints, with
 compiles that file and requires that
 
   * every result is either closed, or depends only on axioms listed in
-    audit/allowed-axioms.txt, each with the same statement as listed;
+    audit/allowed-axioms.txt, each with the same statement as listed.  A
+    result may also name a parameter of CompCert's semantics listed in
+    audit/semantics-parameters.txt.  Those are not assumptions, and that
+    file says why;
   * every lemma in the directory whose name starts with `body_`, which is
     how the proof of a C function's contract is named, is printed there.
 
@@ -26,6 +29,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ALLOWED = ROOT / "audit" / "allowed-axioms.txt"
+PARAMETERS = ROOT / "audit" / "semantics-parameters.txt"
 AUDIT = "AxiomAudit.v"
 CLOSED = "Closed under the global context"
 PRINT = re.compile(r"^\s*Print Assumptions\s+([\w.']+?)\s*\.\s*$", re.M)
@@ -38,10 +42,10 @@ def squash(text):
     return " ".join(text.split())
 
 
-def allowed_axioms():
-    """The entries of the allowed list: blank-line separated, # for comments."""
+def entries_of(path):
+    """The entries of a list: blank-line separated, # for comments."""
     entries, current = set(), []
-    for line in ALLOWED.read_text().splitlines() + [""]:
+    for line in path.read_text().splitlines() + [""]:
         if line.startswith("#"):
             continue
         if line.strip():
@@ -133,19 +137,24 @@ def main():
     if len(found) != len(printed):
         errors.append(f"{len(printed)} results are printed in {AUDIT} but "
                       f"{len(found)} answers came back")
-    allowed = allowed_axioms()
+    allowed = entries_of(ALLOWED)
+    parameters = entries_of(PARAMETERS)
     used = set()
     for name, axioms in zip(printed, found):
         for axiom in axioms:
             used.add(axiom)
-            if axiom not in allowed:
+            if axiom not in allowed and axiom not in parameters:
                 errors.append(f"{name} depends on an axiom that is not in "
                               f"{ALLOWED.relative_to(ROOT)}:\n    {axiom}")
 
-    closed = sum(1 for axioms in found if not axioms)
+    # A result that only names parameters assumes nothing.
+    closed = sum(1 for axioms in found if not set(axioms) - parameters)
+    naming = sum(1 for axioms in found if set(axioms) & parameters)
     print(f"axioms: {label}: {len(found)} results, {closed} closed, "
           f"{len(found) - closed} resting on axioms; "
-          f"{len(used & allowed)} of {len(allowed)} allowed axioms used")
+          f"{len(used & allowed)} of {len(allowed)} allowed axioms used"
+          + (f"; {naming} name a parameter of CompCert's semantics"
+             if naming else ""))
     for e in errors:
         print(f"axioms: ERROR {label}: {e}")
     return 1 if errors else 0

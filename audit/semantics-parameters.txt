@@ -1,0 +1,22 @@
+# Parameters of CompCert's semantics that a result may name.
+#
+# tools/check_axioms.py reads this file together with allowed-axioms.txt.
+# Entries are written the same way.
+#
+# These are not assumptions.  CompCert leaves open what an external
+# function does and what a piece of inline assembly does, and gives each of
+# the two a name without a definition.  Its semantics of C refers to them,
+# so `Print Assumptions` lists them for any theorem whose statement speaks
+# of executions.  A theorem that names one of them holds whatever it is.
+#
+# What CompCert does assume about them are two separate axioms,
+# Events.external_functions_properties and
+# Events.inline_assembly_properties.  Those are not listed here or in
+# allowed-axioms.txt, so a result that depended on either would be
+# rejected.
+
+# What a call to an external function does.  compcert.common.Events.
+Events.external_functions_sem : String.string -> AST.signature -> Events.extcall_sem
+
+# What a piece of inline assembly does.  compcert.common.Events.
+Events.inline_assembly_sem : String.string -> AST.signature -> Events.extcall_sem
