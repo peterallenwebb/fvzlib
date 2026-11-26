@@ -13,9 +13,9 @@
 #                 Linux.  Elsewhere use `make full EXPLORATORY=1`.
 #   make mutants  mutation testing: change adler32.c in several hundred
 #                 small ways and check that a proof fails for each.  Needs
-#                 `make check` and `make proofs` first.  Took 24 and 50
-#                 minutes in two runs on sixteen processors, so
-#                 `make full` does not run it.
+#                 `make check` and `make proofs` first.  Took 24, 50, and
+#                 46 minutes in three runs with JOBS=14 on sixteen
+#                 processors, so `make full` does not run it.
 #                 JOBS sets how many mutants are checked at once.
 #   make clean    remove build products
 #

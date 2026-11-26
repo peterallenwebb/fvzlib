@@ -1524,6 +1524,15 @@ Progress on 2026-11-26:
     a call terminates. The proofs with ticks repeat the plain proofs step
     by step, since we cannot yet run one script against both forms. And
     the claim for `adler32.c` still says nothing about cost.
+- **Mutation testing repeated in full.** Later the same day all 624
+  mutants were run twice against every proof, the ones with ticks
+  included. Each mutant came out as on 2026-11-25: 521 killed, by the same
+  file and lemma, and the same 4 survivors, which pass the proofs with
+  ticks too. The first run took 157 minutes. `WholeFile.v` names every
+  function, which defeated the order the tool builds the proof files in.
+  The order was corrected in `tools/check_mutants.py`, and the second run
+  took 46 minutes. The proofs with ticks killed no mutant, since a plain
+  proof fails first for every one that is killed.
 - **With that, nothing is left on the list of work agreed for this
   milestone.** Whether the milestone is closed has not been decided. What
   stays open inside the criteria is listed in the claim and in the entries

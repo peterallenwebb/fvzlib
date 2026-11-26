@@ -13,9 +13,10 @@ For each mutant the script
     for the unchanged file, which means the change is in code that this
     configuration does not compile;
   * otherwise compiles the proof files, and records the first one that
-    fails, and the lemma it fails in.  The files that name a C function
-    the mutant changes are compiled first, with the files they need.  That
-    only saves time.  A mutant survives only if every file compiles.
+    fails, and the lemma it fails in.  The first file that names a C
+    function the mutant changes is compiled as early as it can be: after
+    the files it needs and no others.  That only saves time.  A mutant
+    survives only if every file compiles.
 
 A mutant is "killed" when a proof file fails.  A mutant "survives" when
 every proof still checks.  A survivor is either a change that makes no
@@ -350,23 +351,27 @@ def functions_in(translation):
 
 
 def build_order(translated, baseline, files, requires):
-    """`files`, with those that name a changed C function moved to the
-    front, together with the files they require."""
+    """`files`, reordered so that the first file that names a changed C
+    function comes as early as it can: after the files it requires and no
+    others.  Then the next such file, and so on, and last the rest.  Each
+    file still comes after every file it requires, since `files` is in
+    build order."""
     before, after = functions_in(baseline), functions_in(translated)
     changed = [n for n in after if after[n] != before.get(n)]
     if not changed:
         return files
     names = re.compile(r"\bf_(?:" + "|".join(map(re.escape, changed)) + r")\b")
-    first = {f for f in files if f != CLIGHT
-             and names.search((PROOFS / f"{f}.v").read_text())}
-    grew = True
-    while grew:
-        more = set().union(*(requires.get(f, set()) for f in first)) - first
-        first |= more
-        grew = bool(more)
-    first.add(CLIGHT)
-    return ([f for f in files if f in first]
-            + [f for f in files if f not in first])
+    order = [CLIGHT]
+    for name in files:
+        if name == CLIGHT or not names.search((PROOFS / f"{name}.v").read_text()):
+            continue
+        needed, grew = {name}, True
+        while grew:
+            more = set().union(*(requires.get(f, set()) for f in needed)) - needed
+            needed |= more
+            grew = bool(more)
+        order += [f for f in files if f in needed and f not in order]
+    return order + [f for f in files if f not in order]
 
 
 def enclosing_lemma(path, line):

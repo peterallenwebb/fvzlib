@@ -416,10 +416,11 @@ The limits:
   than swapping `adler` and `sum2`.
 - **Only this configuration.** The `NO_DIVIDE` code is not compiled, so its
   66 mutants were not tested.
-- **The contracts with a cost bound were tested on 93 mutants only.** They
-  were added after the full runs. A mutant that changes how often a loop
-  runs would have to be killed by them or by the plain proofs, and in the
-  full runs the plain proofs killed every such mutant first.
+- **The proofs with ticks killed nothing.** A mutant is killed by the
+  first file that fails, and for all 521 that is a plain proof. Only the 4
+  survivors reached the proofs with ticks, and they pass them, as they
+  must. So the runs do not show what the proofs with ticks would catch on
+  their own.
 - **No historical vulnerability to reintroduce.** The project plans to
   reintroduce each fixed vulnerability as a mutant. We know of none in
   `adler32.c`. The nearest is our own finding F0001, and the file without
@@ -439,15 +440,30 @@ the same result. The 4 survivors pass the proofs with ticks too, as they
 must: two are the same program, and two change a value the contracts do
 not fix. None of them changes how many ticks are spent.
 
+After that the full run was repeated, twice, against every proof as it
+then stood. Each of the 624 mutants came out as on 2026-11-25: the same
+outcome, the same file that fails first, the same lemma. The first of the
+two runs took 157 minutes, with 8 mutants checked at a time. The tool
+compiles first the files that name the function a mutant changes.
+`WholeFile.v`, added that day, names every function and requires nearly
+every file, so nothing was put first any more, and each mutant of a
+combine function waited for the proofs of `adler32_z`. The order was
+changed: the first file that names a changed function now comes after the
+files it requires and no others. The second run, with that change and 14
+at a time, took 46 minutes. The order decides only how long a run takes.
+A mutant survives only if every file compiles.
+
 To repeat the run, after `make check` and `make proofs`:
 
 ```
-tools/in-container.sh make mutants
+tools/in-container.sh make mutants JOBS=14
 ```
 
-Two runs, each with 14 mutants checked at a time on 16 processors, gave
-the same result for every mutant. One took 24 minutes and the other 50.
-We have not looked into the difference. It is not part of `make full`.
+`JOBS` is how many mutants are checked at a time. Without it, half the
+processors are used. Four full runs on the same 16 processors gave the
+same result for every mutant. The three with 14 at a time and a working
+build order took 24, 50, and 46 minutes. We have not looked into the
+difference. It is not part of `make full`.
 The full list, one line per mutant, is written to
 `build/mutants/adler32/report.txt`.
 
