@@ -50,6 +50,7 @@ Podman.
    | `differential` | zlib as gcc builds it, pristine and patched, returns what the Adler-32 reference model says, on about five thousand inputs |
    | `proofs` | Every VST proof for `adler32.c` |
    | `spikes` | The contract transfer and termination spikes |
+   | `claim` | The commit, patch, flags, theorem, axioms, functions, and ledger entries that the claim for `adler32.c` names are the ones the build uses |
 
 Other uses of the script:
 

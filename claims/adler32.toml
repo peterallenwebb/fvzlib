@@ -1,0 +1,93 @@
+# What the claim in claims/adler32.md refers to.
+#
+# tools/check_claim.py checks every entry against the repository, and
+# checks that the claim's text names each of them.  It runs in `make full`,
+# after the proofs.  It does not judge the wording of the claim.
+#
+# A change to anything listed here is a change to the claim.
+
+claim = "claims/adler32.md"
+
+[subject]
+release = "zlib 1.4"
+commit = "99623ef7097352da7993ba614161fd6a311e046e"
+source = "adler32.c"
+# The whole patch sequence, in order.
+patches = ["0001-adler32-null-buffer-before-one-byte-path.patch"]
+
+[configuration]
+target = "x86-64 Linux"
+# The flags the verifier is given, as in proofs/zlib.mk.
+defines = "-DHAVE_UNISTD_H -DHAVE_STDARG_H -DHAVE_HIDDEN -D_LARGEFILE64_SOURCE=1"
+
+[toolchain]
+# Each must be pinned in env/packages.lock.
+packages = ["coq.9.2.0", "coq-compcert.3.18", "coq-vst.2.17"]
+
+[theorem]
+name = "adler32_c_verified"
+file = "proofs/adler32/WholeFile.v"
+# The file whose printed assumptions tools/check_axioms.py checks.
+audit = "proofs/adler32/AxiomAudit.v"
+# The list of contracts the theorem is stated over.
+contracts = "Gprog"
+# Every axiom a proof may depend on, as in audit/allowed-axioms.txt.
+axioms = [
+  "Classical_Prop.classic",
+  "FunctionalExtensionality.functional_extensionality_dep",
+  "Axioms.prop_ext",
+  "Ensembles.Extensionality_Ensembles",
+  "ClassicalDedekindReals.sig_not_dec",
+  "ClassicalDedekindReals.sig_forall_dec",
+]
+
+# Every function the translated file defines, with its final state:
+# "proven as is" or "proven after a patch".
+
+[[function]]
+name = "adler32_z"
+state = "proven after a patch"
+patch = "0001-adler32-null-buffer-before-one-byte-path.patch"
+contract = "adler32_z_contract"
+
+[[function]]
+name = "adler32"
+state = "proven as is"
+contract = "adler32_contract"
+
+[[function]]
+name = "adler32_combine_"
+state = "proven as is"
+contract = "combine_internal_spec"
+
+[[function]]
+name = "adler32_combine"
+state = "proven as is"
+contract = "adler32_combine_funspec"
+
+[[function]]
+name = "adler32_combine64"
+state = "proven as is"
+contract = "adler32_combine64_funspec"
+
+# Every entry of the ledger, and how the claim stands to it.
+
+[[ledger]]
+entry = "F0001"
+role = "finding"
+note = "Resolved by the patch. The claim is false for unpatched zlib 1.4."
+
+[[ledger]]
+entry = "T0003"
+role = "relied on"
+note = "Unproven. Without it, the signed remainder in the internal combine function is not shown free of a negative operand in the original code."
+
+[[ledger]]
+entry = "T0002"
+role = "not relied on"
+note = "About cost. The claim says nothing about termination or cost."
+
+[[ledger]]
+entry = "T0001"
+role = "not relied on"
+note = "About goto. adler32.c has none."

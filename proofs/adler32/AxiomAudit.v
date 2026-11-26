@@ -10,7 +10,11 @@
     under one fixed name. *)
 
 From fvzlib.proofs.adler32 Require Verif VerifWrapper EmptyBuffer
-  ContractProof ContractReview Combine CombineGuarded.
+  ContractProof ContractReview Combine WholeFile CombineGuarded.
+
+(** The one statement for the whole file, which the claim in
+    [claims/adler32.md] names. *)
+Print Assumptions WholeFile.adler32_c_verified.
 
 (** The contracts of [adler32_z] and [adler32], each covering every kind
     of buffer argument, and the lemmas that each narrower contract follows

@@ -33,6 +33,14 @@ and the other is stated and not proven. Every precondition of the Adler-32
 contracts is reviewed, and the build fails if one changes without its
 review.
 
+The claim for this one file is written out in
+[claims/adler32.md](claims/adler32.md), with what it rests on and what it
+leaves out. It is a claim about `adler32.c` and not about zlib. In short:
+the five functions are proven memory safe and proven to return what the
+manual promises, for patched zlib 1.4 on x86-64 Linux, under CompCert's
+semantics of C. Termination, the rest of what ISO C leaves open, and the
+compiled library are not covered.
+
 The work moved to the x86-64 Linux target on 2026-11-25. The target
 environment is a container, defined by one file, and one command runs every
 check and proof inside it. That command passes on two machines: the
@@ -46,6 +54,7 @@ the container from nothing.
 | `spec/format/` | Layer 1. Format specifications. Standard library only. |
 | `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
 | `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, `semantics-parameters.txt`, two names CompCert leaves undefined that a result about executions may mention, `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason, and `preconditions-adler32.toml`, the review of every precondition of the Adler-32 contracts |
+| `claims/` | What is claimed, one file per claim, each with a list of what it refers to that the build checks. So far `adler32.md`. |
 | `trace/` | Traceability from source sentences to definitions and theorems |
 | `ledger/` | Findings about zlib, and obligations not yet proven, one file each |
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
@@ -1423,6 +1432,38 @@ Progress on 2026-11-26:
   fails.
 - **Still open under criterion 4:** the form with ticks of each contract,
   generated from the same definition as the form without.
+
+- **Criterion 9, met.** The claim for `adler32.c` is written out in
+  [claims/adler32.md](claims/adler32.md). The ledger has four entries: one
+  finding and three unproven obligations.
+  - **The claim is three sentences** that name the release, the patch,
+    the configuration, what is proven, and the three largest limits. The
+    rest of the file says what each word stands for, lists the seven
+    things the claim rests on, and lists ten things it does not cover.
+  - **One theorem now covers the file.** `adler32_c_verified`, in
+    `proofs/adler32/WholeFile.v`, says that every function the translated
+    file defines has a contract in one list of five, and that its body
+    meets that contract when the functions it calls meet theirs from the
+    same list. It replaces five results that each assumed a different
+    list. It quantifies over the functions of the file, so a function
+    added without a proof makes it fail. It rests on the same six axioms.
+  - **What the theorem is not.** It is a statement in VST's logic. It is
+    not joined to VST's soundness theorem, so the step to "no execution
+    goes wrong" rests on that theorem as VST states it. The claim says
+    so.
+  - **The claim's references are checked.** `claims/adler32.toml` lists
+    the commit, the patch sequence, the verifier's flags, the toolchain
+    versions, the theorem, the axioms, the five functions with the state
+    of each, and how the claim stands to each ledger entry.
+    `tools/check_claim.py` checks each against the repository, and checks
+    that the text of the claim names each. `make full` runs it after the
+    proofs. It does not judge the wording.
+  - **Each function has its final state.** `adler32_z` is proven after
+    patch 0001. The other four are proven as is.
+  - **The claim relies on one unproven obligation,** T0003, for one of the
+    two places where the file uses arithmetic that VST does not check.
+  - **The objective asks for one sentence.** The claim takes three, so
+    that the limits are in the part a dependent would quote.
 
 ### Milestone 2: the inflate reference model
 

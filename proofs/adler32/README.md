@@ -41,7 +41,10 @@ contracts for each, which are what the proofs about the C code establish:
 | `adler32_combine64` | The same | The same |
 
 Every function in `adler32.c` is covered: the four exported functions above
-and the internal function that both combine functions call.
+and the internal function that both combine functions call. One theorem
+says so for the file as a whole: `adler32_c_verified`, in `WholeFile.v`.
+The claim built on it, with its limits, is in
+[claims/adler32.md](../../claims/adler32.md).
 
 "Satisfies the Layer 2 specification" means, for `adler32_z` and `adler32`:
 if the checksum argument is the Adler-32 checksum of some earlier bytes, the
@@ -226,8 +229,11 @@ The limits of the review:
   functions are proven separately, for instrumented code, in
   `spikes/termination`. The design calls for each contract to exist in two
   forms from one definition, with and without ticks. That is not built.
-- **Linking.** The contracts are proven function by function. They are not
-  yet assembled into one statement about the whole file.
+- **A theorem about executions.** `WholeFile.v` puts the five proofs into
+  one statement, `adler32_c_verified`: every function the file defines
+  meets its contract when the functions it calls meet theirs. That is the
+  premise of VST's rule for linking, not its conclusion, and it is not
+  joined to VST's soundness theorem.
 - **The rest of the gap VST leaves.** The arithmetic VST does not check is
   listed and dealt with below. Aliasing, pointer arithmetic that leaves an
   object, and evaluation order are not addressed.
@@ -391,6 +397,7 @@ The full list, one line per mutant, is written to
 | `Combine.v` | The contracts and proofs for the combine functions. |
 | `CensusAdler32.v` | The census for this file, pinned as checked statements. |
 | `CombineGuarded.v` | The proof that closes the one open census item. |
+| `WholeFile.v` | One statement for the whole file: every function it defines meets its contract. The claim in `claims/adler32.md` names it. |
 
 Three points about the argument:
 

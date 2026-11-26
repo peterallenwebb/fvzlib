@@ -6,7 +6,8 @@
 #   make full     everything: the toolchain and target check, `make check`,
 #                 the check that the verified source is the built source,
 #                 the differential test of the reference model against
-#                 zlib, and every proof.  Run it inside the pinned switch:
+#                 zlib, every proof, and the check of what the claim
+#                 refers to.  Run it inside the pinned switch:
 #                   opam exec --switch=fvzlib -- make full
 #                 It fails anywhere but the project's first target, x86-64
 #                 Linux.  Elsewhere use `make full EXPLORATORY=1`.
@@ -27,7 +28,7 @@ ROCQ_MAKEFILE := Makefile.rocq
 UPSTREAM ?= upstream/zlib
 
 .PHONY: all check clean full env-check build-check differential proofs \
-        spikes mutants
+        spikes claim mutants
 
 all: $(ROCQ_MAKEFILE)
 	$(MAKE) -f $(ROCQ_MAKEFILE)
@@ -59,6 +60,10 @@ spikes:
 	$(MAKE) -C spikes/transfer
 	$(MAKE) -C spikes/termination
 
+# The claim names things the proofs define, so this runs after them.
+claim:
+	python3 -B tools/check_claim.py --upstream $(UPSTREAM)
+
 mutants:
 	python3 -B tools/check_mutants.py $(if $(JOBS),--jobs $(JOBS))
 
@@ -71,6 +76,7 @@ full:
 	$(MAKE) differential
 	$(MAKE) proofs
 	$(MAKE) spikes
+	$(MAKE) claim
 	@echo "full: all checks passed$(if $(EXPLORATORY), on an exploratory target)"
 
 clean:
