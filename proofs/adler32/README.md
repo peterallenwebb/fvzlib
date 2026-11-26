@@ -147,6 +147,107 @@ The null-buffer proof goes through only for the patched source. Against
 pristine zlib 1.4 it fails at the one-byte path, where VST asks for memory
 at the null pointer. That is finding F0001, seen from the proof's side.
 
+## Mutation testing
+
+A contract that says too little is met by too many programs. To test for
+that, `tools/check_mutants.py` changes `adler32.c` in one small way, checks
+the proofs in this directory against the changed file, and repeats that for
+every change it knows how to make. A changed file is a mutant. A mutant is
+killed when a proof file fails, and survives when every proof still checks.
+
+The runs of 2026-11-25, on the patched file:
+
+| | Mutants |
+|---|---|
+| Made | 624 |
+| Dropped: `clightgen` rejects the file | 33 |
+| Dropped: the change is in code this configuration does not compile | 66 |
+| Checked against the proofs | 525 |
+| Killed | 521 |
+| Survived | 4 |
+
+The 66 are in the macros for processors without division, under
+`NO_DIVIDE`. The 33 are uses of one variable for another whose type does
+not fit.
+
+| Kind of change | Killed | Survived |
+|---|---|---|
+| One operator replaced by a near one, such as `<` by `<=` | 81 | 0 |
+| One integer constant raised or lowered by one | 63 | 2 |
+| One assignment or macro call removed | 44 | 0 |
+| The condition of one `if` or `while` negated | 17 | 0 |
+| One use of a variable replaced by another variable of the function | 308 | 2 |
+| One returned expression raised by one | 7 | 0 |
+| The file as upstream released it, without our patch | 1 | 0 |
+
+| Proof that fails first | Mutants |
+|---|---|
+| `body_adler32_z_buffer` | 287 |
+| `body_adler32_z_null` | 15 |
+| `body_adler32_buffer` | 7 |
+| `body_combine_internal` | 198 |
+| `body_adler32_combine` | 7 |
+| `body_adler32_combine64` | 7 |
+
+Every function of the file has mutants, and every one of them is killed
+apart from the four below.
+
+The four survivors, all in the internal combine function. Each is listed
+with its reason in
+[audit/mutants-adler32.toml](../../audit/mutants-adler32.toml), and the
+tool fails if a mutant survives that is not listed there.
+
+1. **Two are the same program.** After `rem = (unsigned)len2`, the two
+   variables hold the same number, at least 0 and below 65521. Using `len2`
+   for `rem` in `rem * sum1`, or in `BASE - rem`, changes a type and not a
+   value, since C converts either one to `unsigned long` there. The mutant
+   returns what the original returns for every argument.
+2. **Two change the value returned for a negative length.** The code
+   returns `0xffffffff`, which its comment calls a clue for debugging. The
+   manual says the result then "has no meaning or utility", the Layer 2
+   specification allows any result, and so the contract does not fix that
+   constant. One of the two mutants returns 4294967296, which does not fit
+   in 32 bits. The contract allows that too. If we later decide a caller
+   may rely on the debugging value, the place to say so is Layer 2.
+
+So no survivor shows a contract that promises less than the manual does.
+
+The limits:
+
+- **Killed does not mean wrong.** A kill means the proof script no longer
+  checks. Changing `while (len >= 16)` to `while (len > 16)` sends a last
+  block of exactly 16 bytes through the loop that takes one byte at a time
+  and not through the unrolled one. The sums are the same, and the mutant
+  is killed, because the proof is written for the code as it stands. We
+  have not counted how many of the 521 are such programs. What
+  the kills show is that the proofs follow this code token by token. What
+  bears on the strength of the contracts is the survivors, and there the
+  result is as above.
+- **The changes are small and single.** One token or one statement at a
+  time. Not tried: two changes together, an added statement, a removed
+  `return`, a changed type or cast, or a change inside a macro body other
+  than swapping `adler` and `sum2`.
+- **Only this configuration.** The `NO_DIVIDE` code is not compiled, so its
+  66 mutants were not tested.
+- **Only the contracts in this directory.** The cost bounds in
+  `spikes/termination` are proven for instrumented copies of the code and
+  were not tested this way.
+- **No historical vulnerability to reintroduce.** The project plans to
+  reintroduce each fixed vulnerability as a mutant. We know of none in
+  `adler32.c`. The nearest is our own finding F0001, and the file without
+  that patch is killed, in `body_adler32_z_null`.
+
+To repeat the run, after `make check` and `make proofs`:
+
+```
+tools/in-container.sh make mutants
+```
+
+Two runs, each with 14 mutants checked at a time on 16 processors, gave
+the same result for every mutant. One took 24 minutes and the other 50.
+We have not looked into the difference. It is not part of `make full`. The full list, one line per mutant, is written
+to `build/mutants/adler32/report.txt`.
+
 ## How the proof is organized
 
 | File | Contents |

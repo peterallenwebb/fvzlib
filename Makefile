@@ -9,6 +9,12 @@
 #                   opam exec --switch=fvzlib -- make full
 #                 It fails anywhere but the project's first target, x86-64
 #                 Linux.  Elsewhere use `make full EXPLORATORY=1`.
+#   make mutants  mutation testing: change adler32.c in several hundred
+#                 small ways and check that a proof fails for each.  Needs
+#                 `make check` and `make proofs` first.  Took 24 and 50
+#                 minutes in two runs on sixteen processors, so
+#                 `make full` does not run it.
+#                 JOBS sets how many mutants are checked at once.
 #   make clean    remove build products
 #
 # tools/bootstrap.sh installs the pinned toolchain.
@@ -19,7 +25,7 @@
 ROCQ_MAKEFILE := Makefile.rocq
 UPSTREAM ?= upstream/zlib
 
-.PHONY: all check clean full env-check build-check proofs spikes
+.PHONY: all check clean full env-check build-check proofs spikes mutants
 
 all: $(ROCQ_MAKEFILE)
 	$(MAKE) -f $(ROCQ_MAKEFILE)
@@ -46,6 +52,9 @@ proofs:
 spikes:
 	$(MAKE) -C spikes/transfer
 	$(MAKE) -C spikes/termination
+
+mutants:
+	python3 -B tools/check_mutants.py $(if $(JOBS),--jobs $(JOBS))
 
 # In this order: a wrong toolchain stops the run at once, and `check` makes
 # the patched tree that the later steps read.

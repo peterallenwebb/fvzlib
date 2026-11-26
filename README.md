@@ -24,7 +24,9 @@ function in `adler32.c` of patched zlib 1.4 is proven, in VST, to return
 values that satisfy that specification, on the project's first target,
 x86-64 Linux. One
 finding about zlib 1.4 is recorded in the ledger and resolved by the first
-patch in the patch sequence.
+patch in the patch sequence. Mutation testing of `adler32.c` is done: of 525
+small changes to the file, 521 make a proof fail, and the other 4 are
+explained.
 
 The work moved to the x86-64 Linux target on 2026-11-25. The target
 environment is a container, defined by one file, and one command runs every
@@ -38,7 +40,7 @@ the container from nothing.
 |---|---|
 | `spec/format/` | Layer 1. Format specifications. Standard library only. |
 | `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
-| `audit/` | Lists of results that must depend on no axioms, and `allowed-axioms.txt`, the six axioms the C proofs may depend on |
+| `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, and `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason |
 | `trace/` | Traceability from source sentences to definitions and theorems |
 | `ledger/` | Findings about zlib, and obligations not yet proven, one file each |
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
@@ -1268,6 +1270,25 @@ Progress on 2026-11-25, the move to the first target:
 - **Still open under criterion 4:** the form with ticks of each contract,
   generated from the same definition as the form without, and the review
   of each precondition.
+- **Criterion 8, mutation testing done for `adler32.c`.**
+  `tools/check_mutants.py` makes 624 small changes to the patched file, one
+  at a time: an operator, a constant, a removed statement, a negated
+  condition, one variable used for another, a returned value, and the file
+  as upstream released it. 99 are dropped: 33 that do not compile, and 66
+  in the code for processors without division, which this configuration
+  does not build. Of the 525 that remain, 521 make a proof fail, and 4 pass
+  every proof. Each of the 4 is listed with its reason in
+  `audit/mutants-adler32.toml`. Two are the same program: they use `len2`
+  where the code uses its copy `rem`. Two change the value returned for a
+  negative length, where the manual promises nothing and so the contract
+  promises nothing. No survivor shows a contract that says too little
+  against the manual. `make mutants` runs the check. Two runs on the same
+  16 processors gave the same result for every mutant, and took 24 and 50
+  minutes. It is not part of `make full`, and continuous integration
+  does not run it. See
+  [proofs/adler32/README.md](proofs/adler32/README.md#mutation-testing)
+  for the limits. The main one: a failed proof shows that the proofs follow
+  the code closely, not that the changed program is wrong.
 
 ### Milestone 2: the inflate reference model
 

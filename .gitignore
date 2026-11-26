@@ -17,3 +17,6 @@ build/
 spikes/transfer/toy.v
 spikes/termination/adler32.v
 proofs/adler32/adler32_clight.v
+
+# Python byte code
+__pycache__/

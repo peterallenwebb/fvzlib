@@ -1,0 +1,43 @@
+# Mutants of adler32.c that survive: every proof still checks against them.
+#
+# tools/check_mutants.py reads this file.  It fails if a mutant survives and
+# is not listed here, or if a mutant listed here no longer survives.  Each
+# entry gives the reason the survivor is acceptable.  A survivor with no
+# good reason is a contract that promises too little, and belongs in the
+# ledger, not here.
+#
+# A name is the line and column in the patched adler32.c, then the change.
+
+[[survivor]]
+name = "L140C16:0xffffffffUL to 4294967296UL"
+reason = """\
+The value returned by the combine functions for a negative length.  The \
+manual says of it: "If len2 is negative, the result has no meaning or \
+utility."  The Layer 2 specification follows the manual and allows any \
+result there (adler32_combine_spec_negative), so the contracts do not fix \
+this constant.  The source comment calls the value "a clue for debugging". \
+Note that this mutant returns a value that does not fit in 32 bits.  For \
+a negative length the contracts promise nothing about the result, not even \
+that."""
+
+[[survivor]]
+name = "L140C16:0xffffffffUL to 4294967294UL"
+reason = """\
+The same constant and the same reason as for 4294967296UL."""
+
+[[survivor]]
+name = "L146C12:rem to len2"
+reason = """\
+An equivalent program.  The statement before it is rem = (unsigned)len2, \
+and at that point len2 is at least 0 and below 65521, so rem and len2 hold \
+the same number.  They differ in type, unsigned int and signed 64-bit, but \
+the other operand is unsigned long, so C converts either one to unsigned \
+long and the product is the same.  The mutant returns the same value as \
+the original for every argument."""
+
+[[survivor]]
+name = "L149C76:rem to len2"
+reason = """\
+An equivalent program, for the same reason as L146C12.  The value \
+subtracted is converted to unsigned long either way, and is the same \
+number."""
