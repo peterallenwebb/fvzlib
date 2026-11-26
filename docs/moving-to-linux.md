@@ -36,8 +36,8 @@ Podman.
    The first run builds the toolchain image from `env/Containerfile`. It
    compiles OCaml, Rocq, CompCert, and VST from source. That took about
    fifteen minutes on a 16-core machine and 31 minutes on a hosted runner
-   with 4 processors. Later runs reuse the image, and `make full` then takes about three
-   and a half minutes.
+   with 4 processors. Later runs reuse the image, and `make full` then takes about five
+   minutes.
 
    `make full` is the one command behind Milestone 1's first two exit
    criteria. It runs, in order:
@@ -47,6 +47,7 @@ Podman.
    | `env-check` | Every pinned package is installed at its pinned version, and the machine and CompCert are x86-64 Linux |
    | `check` | The specifications, test vectors, layer rules, assumption audit, traceability, and the patch sequence with its witnesses |
    | `build-check` | The source given to the verifier is, token for token, the source the upstream build compiles |
+   | `differential` | zlib as gcc builds it, pristine and patched, returns what the Adler-32 reference model says, on about five thousand inputs |
    | `proofs` | Every VST proof for `adler32.c` |
    | `spikes` | The contract transfer and termination spikes |
 

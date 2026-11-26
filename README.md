@@ -26,7 +26,9 @@ x86-64 Linux. One
 finding about zlib 1.4 is recorded in the ledger and resolved by the first
 patch in the patch sequence. Mutation testing of `adler32.c` is done: of 525
 small changes to the file, 521 make a proof fail, and the other 4 are
-explained.
+explained. The reference model is also tested against the pinned zlib as
+gcc builds it, pristine and patched, on about five thousand inputs in every
+full build.
 
 The work moved to the x86-64 Linux target on 2026-11-25. The target
 environment is a container, defined by one file, and one command runs every
@@ -46,6 +48,7 @@ the container from nothing.
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
 | `patches/` | The patch sequence: one file per patch, and the `sequence` file that orders them |
 | `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
+| `tests/differential/` | The differential test of the reference model against zlib: a C program that records what zlib returns, and the Rocq file that compares the model with it |
 | `references/` | Source documents, unmodified |
 | `tools/` | Checks run by the build, `bootstrap.sh`, which installs the pinned toolchain, and `in-container.sh`, which runs a command in the toolchain container |
 | `env/` | The pinned package versions, the `Containerfile` that defines the toolchain container, and the list of accepted differences for the build check |
@@ -1242,9 +1245,11 @@ Progress on 2026-11-25, the move to the first target:
 - **The F0001 witness is repeated on the target.** Built with gcc 15.2, it
   is killed by signal 11 on the pristine tree and exits with status 0 on
   the patched one.
-- **Still measured only on the development machine:** the comparison of the
-  test vectors with a real zlib, the census counts for the whole core, and
-  the timings in the F0001 ledger entry.
+- **Still measured only on the development machine:** the census counts
+  for the whole core, and the timings in the F0001 ledger entry. The
+  comparison of the test vectors with a real zlib was also on this list. It
+  now runs against the pinned release in every full build. See criterion 3
+  below.
 - **The assumption list is now checked, not only printed.** Each directory
   of C proofs has a file, `AxiomAudit.v`, that prints what every proven
   result depends on. `tools/check_axioms.py` fails the build if a result
@@ -1289,6 +1294,42 @@ Progress on 2026-11-25, the move to the first target:
   [proofs/adler32/README.md](proofs/adler32/README.md#mutation-testing)
   for the limits. The main one: a failed proof shows that the proofs follow
   the code closely, not that the changed program is wrong.
+- **Criterion 3, met.** `make full` now runs a differential test of the
+  reference model against zlib, `tools/check_differential.py`. It builds
+  the zlib library with the upstream `./configure` and makefile three
+  times: pristine, patched, and patched with gcc's address and
+  undefined-behavior checkers. A C program calls `adler32`, `adler32_z`,
+  `adler32_combine`, and `adler32_combine64` 6298 times and records 5098
+  cases, each an input and what zlib returned. Rocq then evaluates the
+  model on every input, and the generated file compiles only if every
+  value agrees. All 5098 agree, the three builds return the same values,
+  and the checkers report nothing. Compared with zlib are the prose
+  definition of RFC 1950, its sample code, and the Layer 2 formula for
+  combining. The 11 test vectors of `Adler32Tests.v` are among the cases,
+  and the pinned zlib returns the value written there for each. The test
+  takes 40 seconds. The limits:
+  - **It is evidence on these inputs, not proof.** The proofs are what
+    cover every input. The test adds what they do not give: it runs the
+    library as gcc compiles it and not as CompCert reads it, and it runs
+    pristine zlib.
+  - **Only calls the manual gives a meaning.** With a buffer, every
+    running checksum passed in is the initial value or an earlier result.
+    The values combined have the form of a checksum, and no length is
+    negative. A null buffer with a length of 1 is left out, since pristine
+    zlib fails there. That is finding F0001, and its witness covers it.
+  - **Inputs of up to 200,000 bytes.** No buffer is longer than 4 GB, so
+    the top bits of the length of `adler32_z` are not exercised. Lengths
+    given to the combine functions go up to the largest value of their
+    signed 64-bit type.
+  - **The static library only,** at the optimization level `./configure`
+    chooses. The shared library is built from the same source with the
+    same flags and is not run.
+  - **The checkers have little to check in this file.** Its arithmetic is
+    unsigned, where C defines every result. They watch the reads from the
+    buffer, and each input sits in a block of exactly its own length.
+  - **The Rocq side trusts more than the proofs do.** It is evaluated by
+    Rocq's virtual machine, and reads its inputs from primitive strings.
+    The specifications use neither.
 
 ### Milestone 2: the inflate reference model
 

@@ -245,8 +245,9 @@ tools/in-container.sh make mutants
 
 Two runs, each with 14 mutants checked at a time on 16 processors, gave
 the same result for every mutant. One took 24 minutes and the other 50.
-We have not looked into the difference. It is not part of `make full`. The full list, one line per mutant, is written
-to `build/mutants/adler32/report.txt`.
+We have not looked into the difference. It is not part of `make full`.
+The full list, one line per mutant, is written to
+`build/mutants/adler32/report.txt`.
 
 ## How the proof is organized
 

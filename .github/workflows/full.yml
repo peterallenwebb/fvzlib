@@ -85,5 +85,6 @@ jobs:
           path: |
             build/environment.txt
             build/build-check.txt
+            build/differential.txt
             build/configure.log
           if-no-files-found: warn

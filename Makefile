@@ -5,7 +5,8 @@
 #                 checks
 #   make full     everything: the toolchain and target check, `make check`,
 #                 the check that the verified source is the built source,
-#                 and every proof.  Run it inside the pinned switch:
+#                 the differential test of the reference model against
+#                 zlib, and every proof.  Run it inside the pinned switch:
 #                   opam exec --switch=fvzlib -- make full
 #                 It fails anywhere but the project's first target, x86-64
 #                 Linux.  Elsewhere use `make full EXPLORATORY=1`.
@@ -25,7 +26,8 @@
 ROCQ_MAKEFILE := Makefile.rocq
 UPSTREAM ?= upstream/zlib
 
-.PHONY: all check clean full env-check build-check proofs spikes mutants
+.PHONY: all check clean full env-check build-check differential proofs \
+        spikes mutants
 
 all: $(ROCQ_MAKEFILE)
 	$(MAKE) -f $(ROCQ_MAKEFILE)
@@ -45,6 +47,9 @@ env-check:
 build-check:
 	python3 tools/check_build.py
 
+differential:
+	python3 -B tools/check_differential.py
+
 proofs:
 	$(MAKE) -C proofs/lib
 	$(MAKE) -C proofs/adler32
@@ -62,6 +67,7 @@ full:
 	$(MAKE) env-check
 	$(MAKE) check
 	$(MAKE) build-check
+	$(MAKE) differential
 	$(MAKE) proofs
 	$(MAKE) spikes
 	@echo "full: all checks passed$(if $(EXPLORATORY), on an exploratory target)"

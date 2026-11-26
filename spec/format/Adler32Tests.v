@@ -4,9 +4,10 @@
 
     RFC 1950 gives no test vectors for Adler-32.  The expected values below
     were computed with a direct transcription of the RFC sample code and
-    agree with zlib's own [adler32].  The comparison with zlib was made
-    against the system library on the development machine.  It must be
-    repeated against the pinned zlib release once that is in the build.
+    agree with zlib's own [adler32].  [tools/check_differential.py] checks
+    that agreement in every full build: it runs the pinned zlib release on
+    the input of each example below that states a checksum, and requires
+    the value written here.
 
     The prose definition [adler32] takes time quadratic in the input, so it
     is tested on short inputs.  The sample-code definition [update] is tested
