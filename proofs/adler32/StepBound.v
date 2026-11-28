@@ -1,15 +1,22 @@
-(** * The step bound applies to the instrumented Adler-32 functions
+(** * Adler-32: few ticks mean few steps
 
-    [bounded_ticks_bound_steps], proven in [../transfer/TickBound.v], is
-    about programs whose functions all have the instrumented form.  This
-    file checks that the five instrumented functions of [adler32.c] have
-    that form, computes their sizes, and states the bound for a program
-    made of them. *)
+    [bounded_ticks_bound_steps_holds], in [proofs/lib/TickBound.v], is about
+    programs whose functions all have the instrumented form.  This file
+    checks that the five functions of [adler32.c] with ticks have that
+    form, computes their sizes, and states the bound for a program made of
+    them.
+
+    This is half of what a statement about time needs, and the smaller
+    half.  It counts steps of CompCert's semantics against ticks spent.
+    How many ticks a call spends is in the contracts with a cost bound,
+    which are statements in VST's logic.  The two are not joined, and
+    neither speaks of the functions without ticks.  So there is still no
+    theorem that a call to a function of [adler32.c] terminates. *)
 
 From compcert Require Import Coqlib AST Ctypes Globalenvs Clight.
 From Stdlib Require Import List Lia.
-From fvzlib.proofs.lib Require Import Ticks.
-Require Import adler32 adler32_ticked TickStatements TickBound.
+From fvzlib.proofs.lib Require Import Ticks TickStatements TickBound.
+From fvzlib.proofs.adler32 Require Import adler32_clight Ticked.
 Import ListNotations.
 Local Open Scope nat_scope.
 
@@ -18,7 +25,7 @@ Definition ticked_functions : list function :=
    f_adler32_combine_ticked; f_adler32_combine64_ticked].
 
 (** None of the five original bodies has a jump or a label, so each
-    instrumented function has the form the theorem asks for. *)
+    function with ticks has the form the theorem asks for. *)
 Lemma all_instrumented f : In f ticked_functions -> instrumented f.
 Proof.
   simpl. intros [<- | [<- | [<- | [<- | [<- | []]]]]].
@@ -46,14 +53,12 @@ Qed.
     them.  An execution that has spent [c] ticks has taken at most
     [689 * (c + 1) + 2] steps.
 
-    The cost contracts proven in this directory bound the ticks a call
-    spends: at most [len / 5552 + len / 16 + 19] for [adler32_z].  Putting
-    the two together would bound the steps of a call by a linear function
-    of [len].  That last link is not made here.  The cost contracts are
-    statements in VST's logic about the value of the counter, and this
-    theorem counts steps of CompCert's semantics.  Joining them needs
-    VST's soundness theorem, and the second theorem of
-    [TickStatements.v] to reach the code without ticks. *)
+    The contracts in [CostContract.v] bound the ticks a call spends: at
+    most [len / 5552 + len / 16 + 19] for [adler32_z] with a buffer.
+    Putting the two together would bound the steps of a call by a linear
+    function of [len].  That link is not made here.  It needs those
+    contracts taken through VST's soundness theorem, and the second
+    theorem of [TickStatements.v] to reach the code without ticks. *)
 Theorem adler32_steps_bounded (ge : genv) entry :
   (forall b f, Genv.find_funct_ptr ge b = Some (Internal f) ->
                In f ticked_functions) ->

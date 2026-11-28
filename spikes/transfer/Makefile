@@ -9,7 +9,7 @@
 
 FLAGS := -Q . "" -Q ../../proofs/lib fvzlib.proofs.lib
 FILES := toy GotoElim toy_nogoto verif_toy_nogoto toy_ticked \
-         verif_toy_ticked Transfer TickStatements TickBound
+         verif_toy_ticked Transfer
 
 .PHONY: all clean
 all: toy.v

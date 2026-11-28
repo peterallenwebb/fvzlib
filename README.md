@@ -1663,6 +1663,25 @@ Its first two suggested improvements were carried out on 2026-11-27.
   - **"The z_off_t type ... is a signed integer."** Mapped to the contract
     of `adler32_combine` and its proof, for this configuration, where the
     type is `long`.
+- **Nothing the record cites is in a spike any more.** This was the
+  retrospective's fourth suggestion.
+  - **The two tick theorems moved to `proofs/lib`.** `TickStatements.v`
+    states both, and `TickBound.v` proves the first. They were in the
+    transfer spike and were the evidence for criterion 6.
+  - **The step bound for `adler32.c` moved to
+    `proofs/adler32/StepBound.v`,** rebased on the functions with ticks of
+    the main proofs. It was in the termination spike.
+  - **The termination spike's cost proofs were removed.** The main proofs
+    superseded them on 2026-11-26. They remain in the history.
+  - **One experiment was kept.** A client that sets the counter itself
+    before each of two calls, and so asks its caller for no budget. It
+    exists nowhere else, so it stays in the spike, as `Twice.v`, and is
+    now proven against the main contract of `adler32_z` with ticks.
+  - **The axiom check still covers the moved results.** They are now
+    printed in the audit file of `proofs/adler32`, and are held to the
+    six axioms as before. The two theorems about steps rest on four of
+    the six, which CompCert's semantics brings into their statements, and
+    name its two parameters.
 - **The claim was revised**, in what it rests on and not in its three
   sentences. `tools/check_claim.py` now also checks the results about
   executions it names.
@@ -1743,6 +1762,8 @@ Small experiments that inform decisions above. Two have been run.
   inflate path.
 - **Termination.** Done on 2026-11-24. See
   [spikes/termination/README.md](spikes/termination/README.md). A cost
-  contract is proven for the real `adler32_z` and `adler32` with ticks added.
-  The two theorems that would carry it to the original code are stated in
-  prose and not proven.
+  contract was proven for the real `adler32_z` and `adler32` with ticks
+  added. The main proofs have since taken this over, and the spike's
+  superseded files were removed on 2026-11-27. Of the two theorems that
+  would carry a cost bound to the original code, both are stated in Rocq,
+  one is proven, and one is not.

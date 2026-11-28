@@ -11,7 +11,8 @@
 
 From fvzlib.proofs.adler32 Require Verif VerifWrapper EmptyBuffer
   ContractProof ContractReview Combine VerifTicked CombineTicked
-  CostContractProof WholeFile CombineGuarded.
+  CostContractProof WholeFile CombineGuarded StepBound.
+From fvzlib.proofs.lib Require TickBound.
 
 (** The one statement for the whole file, which the claim in
     [claims/adler32.md] names. *)
@@ -88,3 +89,13 @@ Print Assumptions CostContractProof.adler32_combine64_two_forms.
 Print Assumptions CostContractProof.adler32_z_ticked_contract_gives_null.
 Print Assumptions CostContractProof.adler32_z_ticked_contract_gives_buffer.
 Print Assumptions CostContractProof.adler32_z_ticked_contract_gives_empty.
+
+(** That few ticks mean few steps: the general theorem, from
+    [proofs/lib/TickBound.v], and what it gives for the five functions
+    with ticks.  The two theorems are about executions.  They name the two
+    parameters of CompCert's semantics, and rest on four of the six
+    axioms, which CompCert's semantics brings into their statements.  The
+    lemma between them is closed. *)
+Print Assumptions TickBound.bounded_ticks_bound_steps_holds.
+Print Assumptions TickBound.instrument_function_instrumented.
+Print Assumptions StepBound.adler32_steps_bounded.

@@ -10,10 +10,9 @@
     an instrumented function shows that the counter never runs out.
 
     This file contains the transformation only.  It began in the contract
-    transfer spike.  What a VST proof about the instrumented code implies
-    for the original is discussed in [spikes/transfer/Transfer.v], and the
-    two theorems that question needs are stated in
-    [spikes/transfer/TickStatements.v]. *)
+    transfer spike.  The two theorems that say what a VST proof about the
+    instrumented code implies for the original are stated in
+    [TickStatements.v].  The first is proven, in [TickBound.v]. *)
 
 From compcert Require Import Coqlib Integers AST Ctypes Cop Clight Clightdefs.
 From Stdlib Require Import List String.

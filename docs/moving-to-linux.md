@@ -37,7 +37,7 @@ Podman.
    compiles OCaml, Rocq, CompCert, and VST from source. That took about
    fifteen minutes on a 16-core machine and 31 minutes on a hosted runner
    with 4 processors. Later runs reuse the image, and `make full` then
-   takes about ten minutes.
+   takes about eight minutes.
 
    `make full` is the one command behind Milestone 1's first two exit
    criteria. It runs, in order:

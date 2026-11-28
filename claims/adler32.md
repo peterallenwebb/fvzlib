@@ -362,7 +362,7 @@ tools/in-container.sh make full
 
 That builds the container, applies the patch, runs the build check and the
 differential test, checks every proof, prints what each proof depends on,
-and checks the references in this file. It takes about ten minutes after
+and checks the references in this file. It takes about eight minutes after
 the container is built. Mutation testing is separate, and takes much
 longer:
 

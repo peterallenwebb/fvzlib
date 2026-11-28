@@ -22,7 +22,7 @@ DEFINES := $(ZLIB_DEFINES)
 FILES   := adler32_clight Bridge Model Steps Buffer Spec Verif VerifWrapper \
            EmptyBuffer Contract ContractProof ContractReview Combine \
            Ticked CostContract VerifTicked CombineTicked CostContractProof \
-           WholeFile CensusAdler32 CombineGuarded
+           WholeFile StepBound CensusAdler32 CombineGuarded
 
 .PHONY: all clean
 all: adler32_clight.v

@@ -2,7 +2,7 @@
 
 Rocq functions over Clight syntax trees that the proofs share, and the
 general theorems about them. The first four files compute and prove nothing
-by themselves. The last three are theorems about any program.
+by themselves. The others state and prove theorems about any program.
 
 | File | Contents |
 |---|---|
@@ -11,6 +11,8 @@ by themselves. The last three are theorems about any program.
 | `Ticks.v` | Adds a counter that is spent on entry to a function and at the start of each loop iteration, and removes it again |
 | `TickLogic.v` | How a VST contract speaks of that counter, and `with_ticks`, which makes the form with ticks of a contract. Needs VST and proves nothing about a program. |
 | `Executions.v` | What it means for a program never to go wrong, in CompCert's terms. Two definitions and a lemma. |
+| `TickStatements.v` | The two theorems about ticks, stated against CompCert's semantics. Definitions only. |
+| `TickBound.v` | The first of the two, proven: an execution that spends few ticks takes few steps. Needs CompCert only. |
 | `Soundness.v` | `verified_program_never_goes_wrong`: a program VST has verified never goes wrong in CompCert's semantics. Applies VST's soundness theorem and adds what it does not give. |
 | `GuardSound.v` | `guards_removed`: if a program with guards never goes wrong, then in the program without them no guard's condition ever holds. Ledger entry T0003. Needs CompCert only. |
 
@@ -119,8 +121,20 @@ therefore differ in the counter and in nothing else.
 The instrumentation began in the contract transfer spike and moved here on
 2026-11-26, when the Adler-32 proofs came to depend on it. What a proof
 about a function with ticks implies for the function without them rests on
-two theorems, stated in `spikes/transfer/TickStatements.v`. One is proven.
-The other is ledger entry T0002.
+two theorems, stated in `TickStatements.v`. Each is a definition of a
+proposition, so stating it assumes nothing.
+
+- **Bounded ticks bound the steps: proven,** in `TickBound.v`. In a
+  program whose functions are all instrumented, with bodies of size at
+  most `K`, an execution that has spent `c` ticks has taken at most
+  `K * (c + 1) + 2` steps.
+- **Erasing the ticks preserves behavior: stated, not proven.** It is
+  ledger entry [T0002](../../ledger/T0002-tick-instrumentation.md). No
+  proof has been attempted.
+
+These two files also began in the transfer spike, and moved here on
+2026-11-27. The record cites them, and a spike is not the place for what
+the record cites.
 
 ## A preview for the whole library
 

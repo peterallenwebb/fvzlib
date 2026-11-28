@@ -262,8 +262,8 @@ function starts before item 7 is decided.
 
 ## Follow-up on 2026-11-27
 
-Items 1, 2 and 3 under "Worth doing before continuing" were carried out
-the next day. The text above is left as written. This section records
+Items 1 to 4 under "Worth doing before continuing" were carried out the
+next day. The text above is left as written. This section records
 what came of them.
 
 - **Item 1, done for one program.** A client whose `main` calls all five
@@ -286,6 +286,13 @@ what came of them.
   bits, which is why the number is 5552, and that had not been proven
   anywhere. It is now a Layer 1 theorem, with a second one showing that
   5553 bytes can be too many.
+
+- **Item 4, done.** The two tick theorems are in `proofs/lib`, and the
+  step bound for `adler32.c` is in `proofs/adler32`. The termination
+  spike's superseded proofs are removed. One thing in that spike was not
+  superseded and was not noticed when the item was written: a client that
+  refills the counter between two calls. It is kept, and now rests on the
+  main contracts.
 
 Item 1 was called "the piece of the method most likely to hold a
 surprise". It held five.
@@ -329,6 +336,8 @@ entry said "a few hundred lines". Both were done by the end of the next
 day. The proof of T0003 is 888 lines, not a few hundred, and our guess is
 that the one direction it leaves out would be about as much again.
 
-Still open from the list above: items 4 to 9. Item 6, the second tick
+Still open from the list above: items 5 to 9. Item 5, a reader from
+outside the project, is the last of those marked for doing before
+continuing. Item 6, the second tick
 theorem, now has its premise available in the right form, since
 `never_goes_wrong` is what VST's soundness theorem is shown to give.

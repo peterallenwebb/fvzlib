@@ -9,9 +9,24 @@ On 2026-11-26 the main proofs took over what this spike began. In
 `proofs/adler32`, each of the five functions with ticks is proven to meet
 one contract that covers memory safety, the value returned, and the cost
 bound, for every call including a null buffer and a buffer of length zero.
-The instrumentation moved to `proofs/lib/Ticks.v`. The files here are kept
-as the record of the spike. Their contracts say less: cost and memory
-safety only, for a buffer that is not null and not empty.
+The instrumentation moved to `proofs/lib/Ticks.v`.
+
+On 2026-11-27 the spike's own files were retired. Its cost proofs were
+superseded: their contracts said less, cost and memory safety only, for a
+buffer that is not null and not empty. They are removed from the tree and
+remain in the history, last at commit `fb039b0`. Two things were not
+superseded, and are kept:
+
+- **The step bound for this file's functions** moved to
+  `proofs/adler32/StepBound.v`, rebased on the functions with ticks of the
+  main proofs.
+- **The client that refills the counter** stays here, as `Twice.v`. It is
+  the one experiment left in this directory. It is now proven against the
+  contract of `adler32_z` with ticks from the main proofs.
+
+The rest of this file is the record of the spike as it was run. Where it
+names a file that is gone, the "Files" section at the end says where the
+result is now.
 
 ## The question
 
@@ -102,8 +117,8 @@ programs whose memories differ by one block.
 ## What is still needed for a claim about the original code
 
 Two theorems. On 2026-11-25 both were stated in Rocq, in
-`../transfer/TickStatements.v`, and the first was proven, in
-`../transfer/TickBound.v`. The second is not proven. See
+`TickStatements.v`, and the first was proven, in `TickBound.v`. Both are
+now in `proofs/lib`. The second is not proven. See
 [the transfer spike](../transfer/README.md#the-two-theorems-about-ticks)
 and ledger entry T0002. The prose below is as written on 2026-11-24.
 
@@ -136,13 +151,24 @@ rests on it as a stated assumption.
 
 ## Files
 
+One file is left here.
+
 | File | Contents |
 |---|---|
-| `adler32_ticked.v` | The five instrumented functions, computed, and the erasure checks |
-| `Buffer.v` | Splitting and rejoining a byte buffer, and the tick tactics |
-| `verif_adler32_z_cost.v` | The cost contract for `adler32_z` and its proof |
-| `verif_adler32_cost.v` | The cost contract for `adler32`, and the refilling client |
-| `verif_combine_cost.v` | The cost contracts for the three combine functions |
-| `adler32_bound.v` | The step bound for a program made of the five instrumented functions |
+| `Twice.v` | The client that refills the counter before each of two calls, proven against the main contract of `adler32_z` with ticks |
 
-The tick instrumentation itself is `../../proofs/lib/Ticks.v`.
+Where the rest went. The first column is the spike's file, as named
+above.
+
+| File of the spike | Contents | Now |
+|---|---|---|
+| `adler32_ticked.v` | The five instrumented functions, computed, and the erasure checks | `proofs/adler32/Ticked.v` |
+| `Buffer.v` | Splitting and rejoining a byte buffer, and the tick tactics | `proofs/adler32/Buffer.v` and `proofs/lib/TickLogic.v` |
+| `verif_adler32_z_cost.v` | The cost contract for `adler32_z` and its proof | `proofs/adler32/CostContract.v`, `VerifTicked.v`, `CostContractProof.v` |
+| `verif_adler32_cost.v` | The cost contract for `adler32`, and the refilling client | `proofs/adler32/CostContractProof.v`, and `Twice.v` here |
+| `verif_combine_cost.v` | The cost contracts for the three combine functions | `proofs/adler32/CombineTicked.v` |
+| `adler32_bound.v` | The step bound for a program made of the five instrumented functions | `proofs/adler32/StepBound.v` |
+
+The tick instrumentation itself is `../../proofs/lib/Ticks.v`. The two
+theorems about ticks are in `../../proofs/lib/TickStatements.v` and
+`TickBound.v`.

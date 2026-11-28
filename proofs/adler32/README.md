@@ -103,6 +103,12 @@ The limits:
   second theorem of ledger entry T0002, which is stated and not proven,
   and it needs these contracts to be joined to VST's soundness theorem.
   There is still no theorem that any call terminates.
+- **What there is on the other side.** `StepBound.v` applies the first
+  theorem of T0002, which is proven: in a program made of the five
+  functions with ticks, an execution that has spent `c` ticks has taken at
+  most `689 * (c + 1) + 2` steps of CompCert's semantics. It counts steps
+  against ticks. The contracts here count ticks against the length of the
+  buffer. The two are not joined.
 - **The bound is an upper bound.** A buffer of length zero spends 2 ticks,
   and its bound is 19, the value of the formula at zero. A buffer of one
   byte spends 1.
@@ -460,6 +466,12 @@ files it requires and no others. The second run, with that change and 14
 at a time, took 46 minutes. The order decides only how long a run takes.
 A mutant survives only if every file compiles.
 
+On 2026-11-27 `StepBound.v` was added, one more file for a mutant to
+pass. The full run was not repeated. The same 93 mutants as on 2026-11-26
+were run again, and each came out as before. The 4 survivors pass
+`StepBound.v`, which pins the size of each function: none of them changes
+a size.
+
 To repeat the run, after `make check` and `make proofs`:
 
 ```
@@ -499,6 +511,7 @@ The full list, one line per mutant, is written to
 | `CombineTicked.v` | The proofs for the combine functions with ticks. |
 | `CostContractProof.v` | The single contract with ticks of `adler32_z` and of `adler32`, the proofs that written and generated contracts say the same, and the `two_forms` lemmas. |
 | `WholeFile.v` | One statement for the whole file: every function it defines meets its contract. The claim in `claims/adler32.md` names it. A second statement says the same of the functions with ticks. |
+| `StepBound.v` | The five functions with ticks have the form the theorem about steps asks for, and the largest has size 689. So in a program made of them, an execution that has spent `c` ticks has taken at most `689 * (c + 1) + 2` steps. |
 
 Three points about the argument:
 

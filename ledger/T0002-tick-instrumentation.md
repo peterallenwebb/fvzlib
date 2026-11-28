@@ -13,13 +13,13 @@ Ticks.v in proofs/lib adds a counter that is spent on function entry and at the 
 
 ## The obligation
 
-Two statements. Both are written out in spikes/transfer/TickStatements.v, in terms of CompCert's semantics of Clight. Each is a definition of a proposition, not an axiom, so stating it assumes nothing.
+Two statements. Both are written out in proofs/lib/TickStatements.v, in terms of CompCert's semantics of Clight. Each is a definition of a proposition, not an axiom, so stating it assumes nothing.
 
 ### First: bounded ticks bound the steps
 
 `bounded_ticks_bound_steps`. Take a program in which every function is instrumented and has a body of size at most K. Start any of its functions with an empty continuation. An execution that has spent c ticks has taken at most K times (c + 1), plus 2, steps.
 
-**Status: proven**, on 2026-11-25, in spikes/transfer/TickBound.v, as `bounded_ticks_bound_steps_holds`. The file is 477 lines. The proof adds no axiom to the ones the statement already mentions through CompCert's semantics. It holds for either of CompCert's two rules for entering a function.
+**Status: proven**, on 2026-11-25, in proofs/lib/TickBound.v, as `bounded_ticks_bound_steps_holds`. The file is 477 lines. The proof adds no axiom to the ones the statement already mentions through CompCert's semantics. It holds for either of CompCert's two rules for entering a function.
 
 Its limits:
 
@@ -47,7 +47,7 @@ The claim for adler32.c, in claims/adler32.md, does not rely on this entry, beca
 
 ## Evidence so far
 
-Contracts that cover memory safety, the value returned, and the cost are proven in VST for the instrumented functions of adler32.c. Erasing the ticks gives back the original function bodies exactly, checked by computation. The five instrumented functions have the form the first statement asks for, checked in spikes/termination/adler32_bound.v, and the largest has size 689.
+Contracts that cover memory safety, the value returned, and the cost are proven in VST for the instrumented functions of adler32.c. Erasing the ticks gives back the original function bodies exactly, checked by computation. The five instrumented functions have the form the first statement asks for, checked in proofs/adler32/StepBound.v, and the largest has size 689.
 
 ## What a proof of the second statement would take
 

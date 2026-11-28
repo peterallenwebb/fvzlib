@@ -42,8 +42,8 @@ is the fallback the README anticipated.
 | `toy_ticked.v` | The instrumentation applied to the transformed toy | Erasure gives back the input exactly |
 | `verif_toy_ticked.v` | A VST cost contract for the instrumented toy | Proven |
 | `Transfer.v` | Where the goto goes in CompCert's semantics | Proven, no axioms |
-| `TickStatements.v` | The two theorems about ticks, stated against CompCert's semantics. Added 2026-11-25 | Definitions only |
-| `TickBound.v` | The first of the two: bounded ticks bound the steps. Added 2026-11-25 | Proven |
+| `../../proofs/lib/TickStatements.v` | The two theorems about ticks, stated against CompCert's semantics. Added here on 2026-11-25 and moved to the shared library on 2026-11-27 | Definitions only |
+| `../../proofs/lib/TickBound.v` | The first of the two: bounded ticks bound the steps. Added and moved on the same days | Proven |
 
 The two VST proofs rest on VST's standard axioms only.
 
@@ -81,7 +81,10 @@ Added on 2026-11-25. The ledger entry is
 [T0002](../../ledger/T0002-tick-instrumentation.md).
 
 `TickStatements.v` states both in Rocq. Each is a definition of a
-proposition, so stating it assumes nothing.
+proposition, so stating it assumes nothing. That file and `TickBound.v`
+are no longer in this directory. They moved to `proofs/lib` on 2026-11-27,
+since the record of Milestone 1 cites them and they are not experiments
+any more.
 
 **Bounded ticks bound the steps: proven.** Take a program in which every
 function is instrumented and has a body of size at most `K`. Start any of

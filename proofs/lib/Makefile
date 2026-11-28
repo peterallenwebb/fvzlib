@@ -4,7 +4,8 @@
 #   make        compile
 #   make clean  remove build products
 
-FILES := Census Guard Ticks TickLogic Executions Soundness GuardSound
+FILES := Census Guard Ticks TickLogic Executions TickStatements TickBound \
+         Soundness GuardSound
 
 .PHONY: all clean
 all:
