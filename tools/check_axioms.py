@@ -10,13 +10,16 @@ compiles that file and requires that
     result may also name a parameter of CompCert's semantics listed in
     audit/semantics-parameters.txt.  Those are not assumptions, and that
     file says why;
+  * with --also FILE, a result may depend on the axioms listed in FILE as
+    well.  That is for the directories whose results are about executions,
+    which rest on more than the six;
   * every lemma in the directory whose name starts with `body_`, which is
     how the proof of a C function's contract is named, is printed there.
 
 An admitted lemma shows up as an axiom, so this also checks that nothing a
 printed result depends on was admitted.
 
-Usage: tools/check_axioms.py [--flags "ROCQ FLAGS"] DIRECTORY
+Usage: tools/check_axioms.py [--flags "ROCQ FLAGS"] [--also FILE] DIRECTORY
        (run after the directory's Rocq sources are built)
 """
 import argparse
@@ -101,6 +104,8 @@ def main():
     ap.add_argument("directory", type=pathlib.Path)
     ap.add_argument("--flags", default="",
                     help="the flags the directory's files are compiled with")
+    ap.add_argument("--also", type=pathlib.Path, action="append", default=[],
+                    help="a further list of axioms these results may use")
     args = ap.parse_args()
     here = args.directory.resolve()
     label = here.relative_to(ROOT) if ROOT in here.parents else here
@@ -139,13 +144,19 @@ def main():
                       f"{len(found)} answers came back")
     allowed = entries_of(ALLOWED)
     parameters = entries_of(PARAMETERS)
+    further = set()
+    for path in args.also:
+        further |= entries_of(path.resolve())
+    lists = " or ".join(str(q.resolve().relative_to(ROOT))
+                        for q in [ALLOWED, *args.also])
     used = set()
     for name, axioms in zip(printed, found):
         for axiom in axioms:
             used.add(axiom)
-            if axiom not in allowed and axiom not in parameters:
+            if (axiom not in allowed and axiom not in parameters
+                    and axiom not in further):
                 errors.append(f"{name} depends on an axiom that is not in "
-                              f"{ALLOWED.relative_to(ROOT)}:\n    {axiom}")
+                              f"{lists}:\n    {axiom}")
 
     # A result that only names parameters assumes nothing.
     closed = sum(1 for axioms in found if not set(axioms) - parameters)
@@ -153,6 +164,8 @@ def main():
     print(f"axioms: {label}: {len(found)} results, {closed} closed, "
           f"{len(found) - closed} resting on axioms; "
           f"{len(used & allowed)} of {len(allowed)} allowed axioms used"
+          + (f", and {len(used & further)} of {len(further)} further ones"
+             if further else "")
           + (f"; {naming} name a parameter of CompCert's semantics"
              if naming else ""))
     for e in errors:

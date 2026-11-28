@@ -15,9 +15,9 @@
     shifts of signed values.  For the other two kinds the transformation
     refuses, returning [None], so an open item is never silently skipped.
 
-    This file contains the transformation only.  That removing the guards
-    leaves the behavior of a program that never gets stuck unchanged is an
-    obligation recorded in the ledger. *)
+    This file contains the transformation only.  What a proof about the
+    guarded program says of the program without the guards is proven in
+    [GuardSound.v]. *)
 
 From compcert Require Import Coqlib Integers AST Ctypes Cop Clight Clightdefs.
 From Stdlib Require Import List String.

@@ -19,8 +19,10 @@
 
     What neither is: a theorem about executions.  Each is the premise of
     VST's rule for linking the functions of a program, not that rule's
-    conclusion, and is not joined to VST's soundness theorem.  The claim
-    in [claims/adler32.md] says what follows from that. *)
+    conclusion.  A library does not run by itself, so the step to
+    executions is taken for a whole program that calls these functions, in
+    [proofs/adler32_client].  It is taken for the contracts without a cost
+    bound only. *)
 
 Require Import VST.floyd.proofauto.
 From fvzlib.proofs.lib Require Import Ticks TickLogic.

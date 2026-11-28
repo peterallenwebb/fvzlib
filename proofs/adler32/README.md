@@ -295,11 +295,14 @@ The limits of the review:
 - **Termination of the code as shipped.** The cost bounds are proven for
   the functions with ticks. See "Cost: the form with ticks" for what is
   still needed to carry them to the functions without.
-- **A theorem about executions.** `WholeFile.v` puts the five proofs into
-  one statement, `adler32_c_verified`: every function the file defines
-  meets its contract when the functions it calls meet theirs. That is the
-  premise of VST's rule for linking, not its conclusion, and it is not
-  joined to VST's soundness theorem.
+- **A theorem about executions, in this directory.** `WholeFile.v` puts
+  the five proofs into one statement, `adler32_c_verified`: every function
+  the file defines meets its contract when the functions it calls meet
+  theirs. That is the premise of VST's rule for linking, not its
+  conclusion. A library does not run by itself, so the step to executions
+  is taken for a whole program that calls these functions, in
+  [proofs/adler32_client](../adler32_client/README.md). It is one program,
+  and the step is taken for the contracts without a cost bound only.
 - **The rest of the gap VST leaves.** The arithmetic VST does not check is
   listed and dealt with below. Aliasing, pointer arithmetic that leaves an
   object, and evaluation order are not addressed.
@@ -325,8 +328,12 @@ unreachable, so the proof shows `len2` is never negative there.
 Two honest limits. The guarded proof repeats the steps of the plain proof,
 since we do not yet have a way to run one proof script against both forms of
 a function. And the step from "the guarded function never gets stuck" to
-"the original never takes a remainder of a negative value" rests on an
-unproven obligation, recorded in the ledger as T0003.
+"the original never takes a remainder of a negative value" is a statement
+about a whole program running, not about the function alone. It was the
+obligation T0003 in the ledger, and was proven on 2026-11-27. For the
+client program in [proofs/adler32_client](../adler32_client/README.md) the
+conclusion is a theorem: whenever that program is about to run
+`len2 %= BASE`, `len2` is not negative.
 
 ## The patch matters
 

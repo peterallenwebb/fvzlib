@@ -15,11 +15,16 @@ checks that:
   * the functions are exactly those the translated source file defines,
     each with a known state, a patch from the sequence if it needs one,
     and a contract that is in the theorem's list;
+  * the results about executions, if any are listed, each exist and have
+    their assumptions printed in their own audit file, the further axioms
+    are exactly those in audit/execution-axioms.txt, each hypothesis is
+    defined, and the program they are about is there;
   * every entry of the ledger is listed with a role, an entry the claim
-    relies on is still unproven, and a finding is still a finding;
-  * the prose names the commit, each patch, each flag, each version, the
-    theorem, each axiom, each function, each contract, and each ledger
-    entry.
+    relies on as unproven is still unproven, one it relies on as proven
+    has that status, and a finding is still a finding;
+  * the prose names the commit, each patch, each flag, each version, each
+    theorem, each axiom, each hypothesis, each function, each contract,
+    and each ledger entry.
 
 It reads text only.  It does not judge the wording of a claim.  What it
 guarantees is that the things a claim names exist and are the ones the
@@ -36,7 +41,7 @@ import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATES = {"proven as is", "proven after a patch"}
-ROLES = {"finding", "relied on", "not relied on"}
+ROLES = {"finding", "relied on", "relied on, proven", "not relied on"}
 
 
 def strip_comments(text):
@@ -61,11 +66,11 @@ def uncommented(path):
             if line.strip() and not line.startswith("#")]
 
 
-def axiom_names():
-    """The names in audit/allowed-axioms.txt: the word before each colon
+def axiom_names(file="allowed-axioms.txt"):
+    """The names in a list of axioms in audit/: the word before each colon
     that starts an entry."""
     names, fresh = [], True
-    for line in (ROOT / "audit" / "allowed-axioms.txt").read_text().splitlines():
+    for line in (ROOT / "audit" / file).read_text().splitlines():
         if line.startswith("#"):
             continue
         if not line.strip():
@@ -143,6 +148,40 @@ def check(path, upstream):
     contracts = set(re.findall(r"\w+", listed.group(1))) if listed else set()
     need(listed, f"no list {theorem['contracts']} in {theorem['file']}")
 
+    # ---- the results about executions ----
+    runs = ref.get("executions")
+    if runs:
+        run_audit_path = ROOT / runs["audit"]
+        run_audit = (strip_comments(run_audit_path.read_text())
+                     if run_audit_path.exists() else "")
+        need(run_audit, f"{runs['audit']}: no such file")
+        need((ROOT / runs["program"]).exists(),
+             f"{runs['program']}: no such file")
+        named("the program", runs["program"])
+        for result in runs.get("theorem", []):
+            where = ROOT / result["file"]
+            body = strip_comments(where.read_text()) if where.exists() else ""
+            need(re.search(r"^Theorem\s+%s\b" % re.escape(result["name"]),
+                           body, re.M),
+                 f"no theorem {result['name']} in {result['file']}")
+            need(re.search(r"^Print Assumptions\s+%s\.%s\."
+                           % (where.stem, result["name"]), run_audit, re.M),
+                 f"{runs['audit']} does not print the assumptions of "
+                 f"{where.stem}.{result['name']}")
+            named("the theorem", result["name"])
+        need(sorted(runs["axioms"]) == sorted(axiom_names("execution-axioms.txt")),
+             "the further axioms are not those of audit/execution-axioms.txt")
+        for axiom in runs["axioms"]:
+            named("the axiom", axiom)
+        defined_in = ROOT / runs["hypotheses_in"]
+        stated = (strip_comments(defined_in.read_text())
+                  if defined_in.exists() else "")
+        for hypothesis in runs["hypotheses"]:
+            need(re.search(r"^Definition\s+%s\b" % re.escape(hypothesis),
+                           stated, re.M),
+                 f"no definition of {hypothesis} in {runs['hypotheses_in']}")
+            named("the hypothesis", hypothesis)
+
     # ---- the functions ----
     clight = file.parent / (pathlib.Path(subject["source"]).stem + "_clight.v")
     if clight.exists():
@@ -186,6 +225,9 @@ def check(path, upstream):
         if item.get("role") == "relied on":
             need("unproven" in status.lower(),
                  f"{entry}: relied on as unproven, but its status is: {status}")
+        if item.get("role") == "relied on, proven":
+            need(status.startswith("Proven") and "unproven" not in status.lower(),
+                 f"{entry}: relied on as proven, but its status is: {status}")
         if item.get("role") == "finding":
             need(entry.startswith("F"), f"{entry}: not a finding")
         named("the ledger entry", entry)
@@ -197,6 +239,10 @@ def check(path, upstream):
     print(f"claim: {shown}: {theorem['name']} over {len(functions)} functions, "
           f"{len(theorem['axioms'])} axioms, relying on "
           f"{', '.join(relied) if relied else 'no unproven obligation'}")
+    if runs:
+        print(f"claim: {shown}: {len(runs.get('theorem', []))} results about "
+              f"executions, {len(runs['axioms'])} further axioms, "
+              f"{len(runs['hypotheses'])} hypotheses")
     for error in errors:
         print(f"claim: ERROR {error}")
     return not errors

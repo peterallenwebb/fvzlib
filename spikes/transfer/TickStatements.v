@@ -18,7 +18,7 @@
 From compcert Require Import Coqlib Integers AST Ctypes Cop Values Memory
   Events Globalenvs Smallstep Behaviors Clight Clightdefs.
 From Stdlib Require Import List.
-From fvzlib.proofs.lib Require Import Ticks.
+From fvzlib.proofs.lib Require Import Ticks Executions.
 Import ListNotations.
 Local Open Scope nat_scope.
 
@@ -262,9 +262,6 @@ Definition names_are_new (p : Clight.program) : Prop :=
     Not covered: a program where a client sets the counter again between
     calls.  That assignment is instrumentation too, and
     [instrument_program] does not add it. *)
-Definition never_goes_wrong (p : Clight.program) : Prop :=
-  forall beh, program_behaves (Clight.semantics2 p) beh -> not_wrong beh.
-
 Definition erasure_preserves_behavior : Prop :=
   forall (budget : int64) (p : Clight.program),
     names_are_new p ->

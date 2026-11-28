@@ -1,6 +1,9 @@
 # The claim for `adler32.c`
 
-Written 2026-11-26, for Milestone 1.
+Written 2026-11-26, for Milestone 1. Revised 2026-11-27: the step from the
+contracts to executions is now a theorem for whole programs, and the one
+obligation the claim relied on, T0003, is proven. The three sentences of
+the claim are unchanged. What they rest on is stated more exactly.
 
 This is a claim about one source file of zlib, the smallest of fifteen. It
 is not a claim about zlib. Nothing here says that inflate or deflate is
@@ -105,11 +108,42 @@ checksum argument.
 
 ### Is memory safe, and changes none of the caller's memory
 
-By VST's soundness theorem, a proven contract means that a call meeting
-the precondition does not get stuck in CompCert's semantics. So it does
-none of these: read or write
-outside an object, use a null or dangling pointer, read uninitialized
-memory, overflow a signed integer, divide by zero, or shift by too much.
+A proven contract is a statement in VST's logic. What it means for a
+running program comes from VST's soundness theorem: a program in which
+every function meets its contract does not get stuck in CompCert's
+semantics. So it does none of these: read or write outside an object, use
+a null or dangling pointer, read uninitialized memory, overflow a signed
+integer, divide by zero, or shift by too much.
+
+That step is now a theorem of ours, for whole programs:
+
+- **For any program.** `verified_program_never_goes_wrong`, in
+  `proofs/lib/Soundness.v`. A program that VST has verified, and whose
+  `main` has a simple shape, never goes wrong in CompCert's semantics of
+  Clight. It applies VST's soundness theorem and adds what that theorem
+  does not give: see "What the claim rests on", item 4.
+- **For one program that calls all five functions.**
+  `client_never_goes_wrong`, in `proofs/adler32_client/Client.v`. The
+  program is `proofs/adler32_client/client.c`. Its `main` makes seven
+  calls: a null buffer, a whole buffer, the same buffer in two pieces, and
+  the two checksums combined. The five functions in it are checked to be
+  the very syntax trees the contracts are proven for.
+
+What this does and does not give:
+
+- **It is about a whole program.** There is no such theorem for a
+  function alone, since a function does not run alone. "Every call that
+  meets the precondition" becomes: every call made by a program whose
+  other functions are verified too. For such a program the general
+  theorem applies. We have applied it to one.
+- **It holds under two hypotheses about external calls.** They are in the
+  statement of each theorem: `more_permission_same_call`, which VST's own
+  theorem takes, and `inline_calls_deterministic`, which we add. Neither
+  is proven. The client program makes no external call.
+- **It says the program does not get stuck.** The values the functions
+  return are in the contracts, and do not appear in the statement about
+  executions.
+
 The contract's postcondition returns the caller's array exactly as it was
 lent, under the same share. The combine functions touch no memory at all.
 
@@ -161,6 +195,23 @@ Everything below is trusted, not proven.
      standard library's real numbers.
 
    The specifications themselves, in `spec/`, depend on no axiom.
+
+   **Five more for the statements about executions.** The theorems named
+   under "Is memory safe" and the result about the remainder in limit 2
+   depend on these as well. They come with VST's soundness theorem and
+   with CompCert's semantics. The build checks them against
+   `audit/execution-axioms.txt`. The proofs of the contracts do not depend
+   on them.
+   - `lib.Axioms.proof_irr`: two proofs of one proposition are equal.
+     CompCert's.
+   - `Eqdep.Eq_rect_eq.eq_rect_eq`: the same for equality proofs. The
+     standard library's.
+   - `Clight_core.inline_external_call_mem_events`: an external call that
+     may be expanded inline changes memory in a way a list of memory
+     operations describes. VST's.
+   - `Events.external_functions_properties` and
+     `Events.inline_assembly_properties`: what CompCert assumes of
+     external functions and of inline assembly.
 3. **CompCert 3.18 as the meaning of C.** The proofs are about the Clight
    program that CompCert's front end makes from the source file. That the
    front end reads C correctly, and that CompCert's semantics is a right
@@ -168,9 +219,24 @@ Everything below is trusted, not proven.
 4. **VST 2.17.** The contracts are statements in VST's program logic.
    What such a statement means for executions is given by VST's own
    soundness theorem, which is proven in Rocq against CompCert's
-   semantics. We have not applied that theorem to this file. So the step
-   from "the contracts are proven" to "no execution goes wrong" rests on
-   VST's theorem as its authors state it, and is not a theorem of ours.
+   semantics. We have now applied that theorem, in
+   `proofs/lib/Soundness.v`. It did not give "never goes wrong" as it
+   stands, and four things had to be added. Each is a way the result is
+   narrower than the words "VST is sound" suggest.
+   - **A hypothesis VST's theorem takes and does not prove,**
+     `more_permission_same_call`: an inline external call behaves the same
+     on a memory that grants more permissions.
+   - **A hypothesis of ours,** `inline_calls_deterministic`. VST's theorem
+     says that some execution is safe. CompCert asks it of every
+     execution. The two agree where each step has one outcome, and the
+     external calls VST executes as steps are where that is not known.
+   - **That `main` returns an integer.** CompCert counts a program as
+     finished when `main` returns an integer, VST when it returns
+     anything. We prove the difference away for a `main` with no loop, no
+     jump, and a `return` of a value on every path. It also uses that
+     pointers have 64 bits.
+   - **That VST's copy of the step relation agrees with CompCert's.**
+     Proven.
 5. **The specification text.** Four files have to be read and believed:
    `spec/format/Bytes.v`, `spec/format/Adler32.v`, `spec/api/Adler32.v`,
    and the contracts in `proofs/adler32/Contract.v` and the head of
@@ -184,13 +250,16 @@ Everything below is trusted, not proven.
 
 ## Unproven obligations
 
-The ledger holds three obligations about program transformations that are
-stated and not yet proven. The claim stands to them as follows.
+The ledger holds three obligations about program transformations. One is
+now proven, and two are stated and not proven. The claim stands to them
+as follows.
 
-- **[T0003](../ledger/T0003-arithmetic-guards.md), relied on.** Removing
-  an arithmetic guard preserves behavior. Without it, the signed remainder
-  in the internal combine function is shown free of a negative operand
-  only for the copy with the guard. See the second limit below.
+- **[T0003](../ledger/T0003-arithmetic-guards.md), relied on, and proven
+  on 2026-11-27.** If a program with guards never goes wrong, then in the
+  program without them no guard's condition ever holds. It is
+  `guards_removed` in `proofs/lib/GuardSound.v`. So the claim no longer
+  rests on an unproven obligation of ours. See the second limit below for
+  what the theorem gives here.
 - **[T0002](../ledger/T0002-tick-instrumentation.md), not relied on.** It
   is about cost, and the claim says nothing about cost.
 - **[T0001](../ledger/T0001-goto-elimination.md), not relied on.** It is
@@ -236,7 +305,8 @@ whether the proofs mean what they seem to.
    - That few ticks mean few steps is proven.
    - That removing the counter leaves the behavior unchanged is stated and
      not proven. See [T0002](../ledger/T0002-tick-instrumentation.md).
-   - Neither is joined to VST's soundness theorem.
+   - The contracts with a cost bound are not joined to VST's soundness
+     theorem. Only the ones without are, and for one program.
 
    So there is no theorem that any call to these functions terminates.
 2. **Everything ISO C leaves open.** The proofs hold under CompCert's
@@ -248,9 +318,12 @@ whether the proofs mean what they seem to.
      file has two such places. `NMAX / 16` is closed by its constants.
      `len2 %= BASE` is shown never to see a negative operand, by a proof
      about a copy of the function with a test added in front of it. That
-     the result carries over to the function without the test is an
-     unproven obligation,
-     [T0003](../ledger/T0003-arithmetic-guards.md).
+     the result carries over to the function without the test is
+     [T0003](../ledger/T0003-arithmetic-guards.md), now proven. Like every
+     statement about executions it is about a whole program. For the
+     client program it is `remainder_operand_not_negative`, in
+     `proofs/adler32_client/Guarded.v`: whenever that program is about to
+     run the statement, `len2` is not negative.
    - **Open:** dependence on the order in which operands are evaluated.
      CompCert fixes an order before the proofs see the code. Closing this
      needs a second tool, which has not been run.
@@ -289,7 +362,7 @@ tools/in-container.sh make full
 
 That builds the container, applies the patch, runs the build check and the
 differential test, checks every proof, prints what each proof depends on,
-and checks the references in this file. It takes about eight minutes after
+and checks the references in this file. It takes about ten minutes after
 the container is built. Mutation testing is separate, and takes much
 longer:
 

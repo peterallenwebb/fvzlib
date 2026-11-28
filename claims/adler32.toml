@@ -41,6 +41,43 @@ axioms = [
   "ClassicalDedekindReals.sig_forall_dec",
 ]
 
+# The results about how a whole program runs.  They are statements in
+# CompCert's semantics, not in VST's logic, and rest on more.
+
+[executions]
+# The program they are instantiated for.
+program = "proofs/adler32_client/client.c"
+# The file whose printed assumptions tools/check_axioms.py checks for them.
+audit = "proofs/adler32_client/AxiomAudit.v"
+# The hypotheses about external calls that each result states.
+hypotheses = ["more_permission_same_call", "inline_calls_deterministic"]
+hypotheses_in = "proofs/lib/Soundness.v"
+# Every further axiom such a result may depend on, as in
+# audit/execution-axioms.txt.
+axioms = [
+  "lib.Axioms.proof_irr",
+  "Eqdep.Eq_rect_eq.eq_rect_eq",
+  "Clight_core.inline_external_call_mem_events",
+  "Events.external_functions_properties",
+  "Events.inline_assembly_properties",
+]
+
+[[executions.theorem]]
+name = "verified_program_never_goes_wrong"
+file = "proofs/lib/Soundness.v"
+
+[[executions.theorem]]
+name = "guards_removed"
+file = "proofs/lib/GuardSound.v"
+
+[[executions.theorem]]
+name = "client_never_goes_wrong"
+file = "proofs/adler32_client/Client.v"
+
+[[executions.theorem]]
+name = "remainder_operand_not_negative"
+file = "proofs/adler32_client/Guarded.v"
+
 # Every function the translated file defines, with its final state:
 # "proven as is" or "proven after a patch".
 
@@ -79,8 +116,8 @@ note = "Resolved by the patch. The claim is false for unpatched zlib 1.4."
 
 [[ledger]]
 entry = "T0003"
-role = "relied on"
-note = "Unproven. Without it, the signed remainder in the internal combine function is not shown free of a negative operand in the original code."
+role = "relied on, proven"
+note = "Proven on 2026-11-27. It carries the result about the signed remainder in the internal combine function from the copy with the guard to the original code, for a whole program."
 
 [[ledger]]
 entry = "T0002"

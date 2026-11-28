@@ -20,8 +20,9 @@ made. See [Decisions](#decisions), [Milestones](#milestones), and
 
 Milestone 1 was closed on 2026-11-26, with some items left open and
 carried forward. They are listed under
-[Milestone 1](#milestone-1-adler-32-end-to-end). Milestone 2 is planned and
-not started. The format specification and the API
+[Milestone 1](#milestone-1-adler-32-end-to-end). Two of them were taken up
+on 2026-11-27: see [After closing](#after-closing). Milestone 2 is planned
+and not started. The format specification and the API
 behavior model for Adler-32 exist, with their traceability file. Every
 function in `adler32.c` of patched zlib 1.4 is proven, in VST, to return
 values that satisfy that specification, on the project's first target,
@@ -36,7 +37,10 @@ and the other is stated and not proven. Every precondition of the Adler-32
 contracts is reviewed, and the build fails if one changes without its
 review. Each contract also has a form with a cost bound, proven for the
 function with a tick counter added. That does not yet give a theorem that
-the functions as shipped terminate.
+the functions as shipped terminate. For one whole program that calls all
+five functions, the contracts are carried to a statement about executions:
+in CompCert's semantics the program never goes wrong, given two hypotheses
+about external calls.
 
 The claim for this one file is written out in
 [claims/adler32.md](claims/adler32.md), with what it rests on and what it
@@ -58,10 +62,10 @@ the container from nothing.
 |---|---|
 | `spec/format/` | Layer 1. Format specifications. Standard library only. |
 | `spec/api/` | Layer 2. API behavior. Depends on Layer 1 only. |
-| `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, `semantics-parameters.txt`, two names CompCert leaves undefined that a result about executions may mention, `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason, and `preconditions-adler32.toml`, the review of every precondition of the Adler-32 contracts |
+| `audit/` | Lists of results that must depend on no axioms, `allowed-axioms.txt`, the six axioms the C proofs may depend on, `execution-axioms.txt`, five more that a result about executions may depend on, `semantics-parameters.txt`, two names CompCert leaves undefined that such a result may mention, `mutants-adler32.toml`, the mutants of `adler32.c` that survive mutation testing, each with its reason, and `preconditions-adler32.toml`, the review of every precondition of the Adler-32 contracts |
 | `claims/` | What is claimed, one file per claim, each with a list of what it refers to that the build checks. So far `adler32.md`. |
 | `trace/` | Traceability from source sentences to definitions and theorems |
-| `ledger/` | Findings about zlib, and obligations not yet proven, one file each |
+| `ledger/` | Findings about zlib, and obligations about program transformations with the status of each, one file each |
 | `upstream/zlib/` | Pristine zlib 1.4, a git submodule pinned to the release commit |
 | `patches/` | The patch sequence: one file per patch, and the `sequence` file that orders them |
 | `tests/witness/` | Programs that fail on pristine zlib and pass once patched |
@@ -1594,6 +1598,66 @@ Left open, and carried forward:
 
 Items 1 to 3 matter more for inflate than they did here. A decision on
 when to take them up belongs with the plan for the next milestone.
+
+#### After closing
+
+A retrospective was written on 2026-11-26:
+[docs/retrospectives/milestone-1.md](docs/retrospectives/milestone-1.md).
+Its first two suggested improvements were carried out on 2026-11-27.
+
+- **A statement about executions for `adler32.c`.**
+  [proofs/adler32_client](proofs/adler32_client/README.md) holds a whole
+  program whose `main` calls the four public functions, and through them
+  the internal one. It is verified in VST against the contracts already
+  proven, and then taken through VST's soundness theorem:
+  `client_never_goes_wrong` says that no behavior of the program, in
+  CompCert's semantics of Clight, is a wrong one.
+  - **The general theorem is in `proofs/lib/Soundness.v`.** It is about
+    any program VST has verified, and is what later files will use.
+  - **VST's theorem did not give this as it stands.** It takes a
+    hypothesis about external calls that VST does not prove. It says that
+    some execution is safe, where CompCert asks it of every execution, so
+    we add a second hypothesis, that the external calls VST executes as
+    steps have one result. It counts a program as finished when `main`
+    returns anything, where CompCert requires an integer, so we prove that
+    `main` returns one, for a `main` of a simple shape. And the judgment
+    VST's tactics establish is not the one its theorem takes: VST's own
+    bridge between them is used.
+  - **It rests on more axioms.** Five beyond the six: two of CompCert's
+    about external calls, CompCert's proof irrelevance, the standard
+    library's for equality proofs, and one of VST's about the memory
+    effects of inline calls. They are in `audit/execution-axioms.txt`,
+    and only results about executions are checked against it. The proofs
+    of the contracts still rest on the six.
+  - **Limits.** One program and seven calls. One translation unit, so
+    nothing about linking. The statement is that the program does not get
+    stuck: the values returned do not appear in it. The contracts with a
+    cost bound are not carried over, so there is still no termination
+    theorem.
+- **T0003 is proven.** `guards_removed`, in `proofs/lib/GuardSound.v`: if
+  a program with guards never goes wrong, then every state the program
+  without them passes through is matched by the guarded program, and in it
+  no guard's condition holds. For the client this gives
+  `remainder_operand_not_negative`: whenever the client as written is
+  about to run `len2 %= BASE` in the internal combine function, `len2` is
+  not negative. The claim for `adler32.c` now rests on no unproven
+  obligation of ours.
+  - **Not proven:** that the program without guards never goes wrong, from
+    the guarded one alone. That needs the simulation in the other
+    direction. For `adler32.c` the functions without guards are verified
+    directly, so it is not needed.
+- **The claim was revised**, in what it rests on and not in its three
+  sentences. `tools/check_claim.py` now also checks the results about
+  executions it names.
+- **Open items after this.** Of the six listed at closing: item 2 is done.
+  Item 1 is still open, since the join to VST's soundness theorem is made
+  for the contracts without a cost bound and the second tick theorem is
+  unproven. Items 3 to 6 are unchanged.
+- **One thing learned about the tools.** VST's tactic for a call did not
+  finish, in several minutes, on a call whose result went to a local
+  variable named `joined64`. With the variable renamed it takes a fraction
+  of a second. We have not found the cause. It cost more time than either
+  proof.
 
 ### Milestone 2: the inflate reference model
 

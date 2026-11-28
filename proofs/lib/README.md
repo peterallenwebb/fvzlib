@@ -1,14 +1,18 @@
 # Analyses and transformations over the syntax tree
 
-Rocq functions over Clight syntax trees that the proofs share. They compute.
-They prove nothing by themselves.
+Rocq functions over Clight syntax trees that the proofs share, and the
+general theorems about them. The first four files compute and prove nothing
+by themselves. The last three are theorems about any program.
 
 | File | Contents |
 |---|---|
 | `Census.v` | Lists the arithmetic in a function that VST does not check |
 | `Guard.v` | Inserts a test in front of each open census item, so that a VST proof has to show the bad operand values never arise |
 | `Ticks.v` | Adds a counter that is spent on entry to a function and at the start of each loop iteration, and removes it again |
-| `TickLogic.v` | How a VST contract speaks of that counter, and `with_ticks`, which makes the form with ticks of a contract. The one file here that needs VST and proves nothing about a program. |
+| `TickLogic.v` | How a VST contract speaks of that counter, and `with_ticks`, which makes the form with ticks of a contract. Needs VST and proves nothing about a program. |
+| `Executions.v` | What it means for a program never to go wrong, in CompCert's terms. Two definitions and a lemma. |
+| `Soundness.v` | `verified_program_never_goes_wrong`: a program VST has verified never goes wrong in CompCert's semantics. Applies VST's soundness theorem and adds what it does not give. |
+| `GuardSound.v` | `guards_removed`: if a program with guards never goes wrong, then in the program without them no guard's condition ever holds. Ledger entry T0003. Needs CompCert only. |
 
 ## The census
 
@@ -58,8 +62,44 @@ inspecting types and constants. The second inserts the tests, looking only
 at the shape of the statements. Keeping them apart lets the result be
 computed with the names in the function left folded, so it stays readable.
 
-That removing the guards does not change the behavior of a program that
-never gets stuck is an unproven obligation, recorded in the ledger as T0003.
+What a proof about the guarded program says of the program without the
+guards is `guards_removed`, in `GuardSound.v`. It was recorded in the
+ledger as the obligation T0003 and proven on 2026-11-27. If the guarded
+program never goes wrong, the original passes through matching states, and
+in each of them every test for the statement about to run evaluates to
+false. It does not show that the original itself never goes wrong. See the
+[ledger entry](../../ledger/T0003-arithmetic-guards.md).
+
+## From VST's logic to executions
+
+A VST proof is a statement in VST's logic. `Soundness.v` takes a whole
+program that VST has verified to a statement in CompCert's own terms: no
+behavior of the program is a wrong one. That is the premise of CompCert's
+theorem about the code it compiles, and of our theorems about
+transformations.
+
+VST's soundness theorem does not give this as it stands. Four things are
+added, and each shows in the statement or in what it depends on.
+
+- **A hypothesis VST's theorem takes and does not prove.** An external
+  call that may be expanded inline behaves the same on a memory that
+  grants more permissions.
+- **A hypothesis of ours.** Such a call has one result. VST's theorem says
+  some execution is safe, CompCert asks it of every execution, and the two
+  agree only where a step has one outcome.
+- **That `main` returns an integer.** CompCert calls a program finished
+  when `main` returns an integer. VST calls it finished when `main` returns
+  anything. `main_returns_an_int` closes the difference for a `main` with
+  no loop and no jump, and with a `return` of a value on every path. It
+  holds where pointers have 64 bits.
+- **That VST's copy of the step relation agrees with CompCert's.**
+
+VST's theorem also depends on two axioms beyond the six the contract
+proofs use, and VST's own bridge from the proofs its tactics build adds a
+third. They are in `audit/execution-axioms.txt`.
+
+The result is about whole programs. A library has no `main`, so it is used
+through a client: see [proofs/adler32_client](../adler32_client/README.md).
 
 ## The ticks
 

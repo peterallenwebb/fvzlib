@@ -55,6 +55,7 @@ differential:
 proofs:
 	$(MAKE) -C proofs/lib
 	$(MAKE) -C proofs/adler32
+	$(MAKE) -C proofs/adler32_client
 
 spikes:
 	$(MAKE) -C spikes/transfer
@@ -82,6 +83,7 @@ full:
 clean:
 	$(MAKE) -C proofs/lib clean
 	$(MAKE) -C proofs/adler32 clean
+	$(MAKE) -C proofs/adler32_client clean
 	$(MAKE) -C spikes/transfer clean
 	$(MAKE) -C spikes/termination clean
 	if [ -f $(ROCQ_MAKEFILE) ]; then $(MAKE) -f $(ROCQ_MAKEFILE) cleanall; fi

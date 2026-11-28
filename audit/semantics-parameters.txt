@@ -12,8 +12,9 @@
 # What CompCert does assume about them are two separate axioms,
 # Events.external_functions_properties and
 # Events.inline_assembly_properties.  Those are not listed here or in
-# allowed-axioms.txt, so a result that depended on either would be
-# rejected.
+# allowed-axioms.txt, so a proof of a C contract that depended on either
+# would be rejected.  They are listed in execution-axioms.txt, which only
+# the results about executions are checked against.
 
 # What a call to an external function does.  compcert.common.Events.
 Events.external_functions_sem : String.string -> AST.signature -> Events.extcall_sem

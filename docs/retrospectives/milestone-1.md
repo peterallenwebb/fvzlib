@@ -259,3 +259,67 @@ it. It does not depend on anything left open here. The C proofs for
 inflate do. We recommend that the plan for the next milestones say when
 items 1, 2, 6, and 7 above are done, and that no C proof of an inflate
 function starts before item 7 is decided.
+
+## Follow-up on 2026-11-27
+
+Items 1 and 2 under "Worth doing before continuing" were carried out the
+next day. The text above is left as written. This section records what
+came of them.
+
+- **Item 1, done for one program.** A client whose `main` calls all five
+  functions is verified in VST and taken through VST's soundness theorem
+  to a statement in CompCert's semantics: it never goes wrong. See
+  [proofs/adler32_client](../../proofs/adler32_client/README.md). The
+  general theorem is `verified_program_never_goes_wrong`, in
+  `proofs/lib/Soundness.v`.
+- **Item 2, done.** T0003 is proven, as `guards_removed` in
+  `proofs/lib/GuardSound.v`. For the client it gives a theorem about the
+  internal combine function as shipped: the operand of its signed
+  remainder is never negative. The claim for `adler32.c` no longer rests
+  on an unproven obligation of ours.
+
+Item 1 was called "the piece of the method most likely to hold a
+surprise". It held five.
+
+1. **VST's theorem takes a hypothesis VST does not prove,** about external
+   calls on a memory with more permissions.
+2. **It concludes that some execution is safe, not every one.** The two
+   agree only where steps have one outcome. We added a hypothesis that
+   the external calls VST executes as steps have one result.
+3. **It counts a program as finished when `main` returns anything.**
+   CompCert requires an integer. We proved that `main` returns one, for a
+   `main` of a simple shape.
+4. **It rests on more axioms than the contract proofs.** Three more
+   through VST, and two of CompCert's own for T0003. Eleven in all,
+   against six.
+5. **The judgment VST's tactics establish is not the one its theorem
+   takes.** VST provides the bridge, and it is where one of the axioms
+   comes from.
+
+None of the five makes the result false. Each makes it narrower than
+"VST is sound, so the contracts hold of executions" suggests, and each is
+now in the statement of a theorem or in a checked list, where before it
+was in nobody's sight.
+
+What this changes in the lessons above:
+
+- **Lesson 3 is borne out.** The exit criteria were met as worded while
+  this step had never been taken. Taking it changed what the claim says
+  it rests on.
+- **A new one: a statement about executions is about a whole program.**
+  There is no theorem of this kind for a library function alone. For each
+  file we will need a client, or a general client, and should decide
+  which before the inflate proofs.
+- **A new one: when a proof step that should be instant does not return,
+  suspect the tool before the proof.** The largest single cost of the two
+  items was a call tactic that stalled on a variable named `joined64`. We
+  still do not know why.
+
+The estimates. Item 1 was guessed at "a few days", and item 2's ledger
+entry said "a few hundred lines". Both were done by the end of the next
+day. The proof of T0003 is 888 lines, not a few hundred, and our guess is
+that the one direction it leaves out would be about as much again.
+
+Still open from the list above: items 3 to 9. Item 6, the second tick
+theorem, now has its premise available in the right form, since
+`never_goes_wrong` is what VST's soundness theorem is shown to give.

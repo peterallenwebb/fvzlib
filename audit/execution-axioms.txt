@@ -1,0 +1,51 @@
+# Further axioms that a result about executions may depend on.
+#
+# tools/check_axioms.py reads this file when it is given with --also.
+# Entries are written as in allowed-axioms.txt.
+#
+# A proof of a C contract is a statement in VST's logic, and rests on the
+# six axioms in allowed-axioms.txt.  A statement about how a program runs
+# needs more.  It goes through VST's soundness theorem and through
+# CompCert's semantics, and these bring in the five axioms below.  None is
+# added by this project.
+#
+# Only the directories whose results are about executions are checked
+# against this file.  The proofs of the contracts of zlib's functions are
+# not, and must still rest on the six.
+
+# Two proofs of the same proposition are equal.  Declared by CompCert, in
+# compcert.lib.Axioms.  It follows from excluded middle, which is among
+# the six, but CompCert states it as an axiom of its own.
+lib.Axioms.proof_irr : ClassicalFacts.proof_irrelevance
+
+# The same, for equality proofs used to change a type.  Rocq standard
+# library, Stdlib.Logic.Eqdep.
+Eqdep.Eq_rect_eq.eq_rect_eq :
+  forall (U : Type) (p : U) (Q : U -> Type) (x : Q p) (h : p = p),
+  x = eq_rect p Q x p h
+
+# An external call that CompCert may expand inline changes memory in a
+# way that a list of allocations, frees, reads and writes describes.
+# Declared by VST, in VST.veric.Clight_core.  VST's soundness theorem
+# depends on it.
+Clight_core.inline_external_call_mem_events :
+  forall (ef : AST.external_function) (ge : Globalenvs.Senv.t)
+    (vargs : list Values.val) (m : Memory.Mem.mem) (t : Events.trace)
+    (vres : Values.val) (m' : Memory.Mem.mem),
+  AST.ef_inline ef = true ->
+  Events.external_call ef ge vargs m t vres m' ->
+  {trace : list event_semantics.mem_event
+  | event_semantics.ev_elim m trace m'}
+
+# What CompCert assumes of an external function: among other things, that
+# it respects the bounds of memory and does not depend on the names of
+# blocks.  compcert.common.Events.
+Events.external_functions_properties :
+  forall (id : String.string) (sg : AST.signature),
+  Events.extcall_properties (Events.external_functions_sem id sg) sg
+
+# The same assumptions for a piece of inline assembly.
+# compcert.common.Events.
+Events.inline_assembly_properties :
+  forall (id : String.string) (sg : AST.signature),
+  Events.extcall_properties (Events.inline_assembly_sem id sg) sg
