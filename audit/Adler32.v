@@ -17,6 +17,8 @@ Print Assumptions Adler32Facts.s1_app.
 Print Assumptions Adler32Facts.s2_app.
 Print Assumptions Adler32Facts.prefixes_firstn.
 Print Assumptions Adler32Facts.adler32_one_byte_changed.
+Print Assumptions Adler32Facts.delay_5552.
+Print Assumptions Adler32Facts.delay_5553_does_not_fit.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_initial_value.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_reference_meets_spec.
 Print Assumptions fvzlib.api.Adler32Facts.adler32_spec_deterministic.

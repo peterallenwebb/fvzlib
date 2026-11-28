@@ -503,7 +503,9 @@ The full list, one line per mutant, is written to
 Three points about the argument:
 
 1. **The accumulators cannot overflow.** `Model.v` bounds them after at most
-   5552 bytes, far below 2^64.
+   5552 bytes, far below 2^64. That is all the proof needs on this target.
+   Why the number is 5552 is a fact about 32-bit accumulators, and is
+   proven in Layer 1 as `delay_5552` and `delay_5553_does_not_fit`.
 2. **Reducing late gives the same answer as reducing at every step.** This
    is `modpair_acc`, which rests on a Layer 1 lemma.
 3. **The one-byte path is exact only for a reduced checksum.** It reduces

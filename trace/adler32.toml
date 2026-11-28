@@ -12,6 +12,11 @@
 #   pending      to be covered by a later layer or milestone, as the note says
 #   not-covered  deliberately not covered, for the reason in the note
 #
+# A name in covered_by is in a specification layer, fvzlib.format. or
+# fvzlib.api., or in a directory of C proofs, fvzlib.proofs.<directory>.
+# An entry that names an item in the C proofs must have a note, since such
+# an item holds for the configuration the proofs are about and no other.
+#
 # sha256 is the hash of the sentence text.  Passage text is compared after
 # collapsing all runs of white space to one space.
 #
@@ -125,8 +130,13 @@ after = "9. Appendix: Sample code"
   [[passage.sentence]]
   text = "The modulo on unsigned long accumulators can be delayed for 5552 bytes, so the modulo operation time is negligible."
   sha256 = "fa40a8efc02d9ae04f8329811c0d555db6513f838cd6c029ac2d6c211a3d4afb"
-  status = "pending"
-  note = "A fact about implementations. To be established in Layer 4 when the delayed-modulo loop of adler32_z is proven."
+  status = "theorem"
+  covered_by = [
+    "fvzlib.format.Adler32Facts.delay_5552",
+    "fvzlib.format.Adler32Facts.delay_5553_does_not_fit",
+    "fvzlib.proofs.adler32.Verif.body_adler32_z_buffer",
+  ]
+  note = "delay_5552: from reduced sums, up to 5552 more bytes with no reduction leave both sums below 2^32, and reducing then gives what reducing at every step gives. delay_5553_does_not_fit: 5553 bytes can be too many. body_adler32_z_buffer is the proof of zlib's own loop, which delays in this way, for the first target only, where the accumulators have 64 bits. That the time of the modulo is negligible is not covered."
 
   [[passage.sentence]]
   text = "If the bytes are a, b, c, the second sum is 3a + 2b + c + 3, and so is position and order sensitive, unlike the first sum, which is just a checksum."
@@ -339,8 +349,12 @@ after = "*/"
   [[passage.sentence]]
   text = "Note that the z_off_t type (like off_t) is a signed integer."
   sha256 = "57bd6c37af82a0e7d50623b44358ca7de9625a495d6c3f7643354b46e1196b17"
-  status = "pending"
-  note = "The C type of len2 is a Layer 3 matter."
+  status = "definition"
+  covered_by = [
+    "fvzlib.proofs.adler32.Combine.adler32_combine_funspec",
+    "fvzlib.proofs.adler32.Combine.body_adler32_combine",
+  ]
+  note = "For the first target only, where z_off_t is long: 64 bits and signed. The contract gives len2 that C type and admits every value of it, negative ones included. The proof is against the function as translated, and would not go through if the parameter had another type. For a configuration where z_off_t is another type nothing is shown."
 
   [[passage.sentence]]
   text = "If len2 is negative, the result has no meaning or utility."

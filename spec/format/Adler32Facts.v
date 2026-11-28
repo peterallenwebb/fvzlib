@@ -136,6 +136,69 @@ Lemma fold_step_closed l a b :
    (b + sum (map (fun p => a + sum p) (prefixes l))) mod base).
 Proof. rewrite fold_step_mod, fold_raw. reflexivity. Qed.
 
+(** ** How long the reduction can be put off
+
+    RFC 1950, section 8.2, says the reduction modulo [base] "can be delayed
+    for 5552 bytes" on accumulators that have at least 32 bits.  These
+    three results make that exact.
+
+    - [raw_fold_bounds]: how large the two sums can get with no reduction.
+    - [delay_5552]: start from reduced sums and add up to 5552 bytes with
+      no reduction.  Both sums stay below 2^32, and reducing them then
+      gives the pair that reducing at every step gives.
+    - [delay_5553_does_not_fit]: 5552 is the most.  With 5553 bytes the
+      second sum can reach 2^32. *)
+
+Lemma raw_fold_bounds l : forall a b,
+  all_bytes l -> 0 <= a -> 0 <= b ->
+  let n := Z.of_nat (length l) in
+  let st := fold_left raw_step l (a, b) in
+  0 <= fst st <= a + 255 * n /\
+  0 <= 2 * snd st <= 2 * b + 2 * n * a + 255 * n * (n + 1).
+Proof.
+  induction l as [|x l IH]; intros a b Hbytes Ha Hb.
+  - cbv zeta. cbn [fold_left length fst snd]. change (Z.of_nat 0) with 0. lia.
+  - inversion Hbytes as [|? ? Hx Hl]; subst. unfold is_byte in Hx.
+    cbn [fold_left]. change (raw_step (a, b) x) with (a + x, b + (a + x)).
+    specialize (IH (a + x) (b + (a + x)) Hl ltac:(lia) ltac:(lia)).
+    cbv zeta in *. rewrite length_cons, Nat2Z.inj_succ.
+    set (n := Z.of_nat (length l)) in *.
+    assert (0 <= n) by (subst n; lia).
+    destruct IH as [[IH1 IH2] [IH3 IH4]].
+    repeat split; try lia; nia.
+Qed.
+
+Theorem delay_5552 l a b :
+  all_bytes l -> Z.of_nat (length l) <= 5552 ->
+  0 <= a < base -> 0 <= b < base ->
+  let st := fold_left raw_step l (a, b) in
+  0 <= fst st < 4294967296 /\ 0 <= snd st < 4294967296 /\
+  (fst st mod base, snd st mod base) = fold_left step l (a, b).
+Proof.
+  intros Hbytes Hlen Ha Hb st.
+  pose proof (raw_fold_bounds l a b Hbytes ltac:(lia) ltac:(lia)) as B.
+  cbv zeta in B. fold st in B.
+  set (n := Z.of_nat (length l)) in *.
+  assert (0 <= n) by (subst n; lia).
+  unfold base in *.
+  destruct B as [[B1 B2] [B3 B4]].
+  assert (n * (n + 1) <= 5552 * 5553) by nia.
+  assert (n * a <= 5552 * 65520) by nia.
+  repeat split; try lia.
+  unfold st. rewrite <- fold_step_mod.
+  unfold base. rewrite !Z.mod_small by lia. reflexivity.
+Qed.
+
+Example delay_5553_does_not_fit :
+  all_bytes (repeat 255 (Z.to_nat 5553)) /\
+  4294967296 <= snd (fold_left raw_step (repeat 255 (Z.to_nat 5553)) (65520, 65520)).
+Proof.
+  split.
+  - apply Forall_forall. intros x Hx. apply repeat_spec in Hx. subst.
+    unfold is_byte. lia.
+  - vm_compute. discriminate.
+Qed.
+
 (** ** An ambiguity in the prose is harmless
 
     "s2 is the sum of all s1 values. Both sums are done modulo 65521."  This

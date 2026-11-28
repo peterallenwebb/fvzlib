@@ -271,11 +271,11 @@ None of this is proof. It bears on whether the specifications are right and
 whether the proofs mean what they seem to.
 
 - **Traceability.** The 31 sentences about Adler-32 in RFC 1950 and
-  `zlib.h` are each mapped: 12 to a definition, 6 to a theorem, 1 to a
-  test, 9 marked not covered with a reason, and 3 pending. Of the 3, one
-  belongs to the stream format of a later milestone. The other two are
-  established by the C proofs, and the traceability file cannot yet point
-  into those.
+  `zlib.h` are each mapped: 13 to a definition, 7 to a theorem, 1 to a
+  test, 9 marked not covered with a reason, and 1 pending. The pending one
+  belongs to the stream format of a later milestone. Two of the 31 are
+  mapped to items in the C proofs, so they are covered for this
+  configuration only, and each entry says so.
 - **Two readings of the RFC agree.** Adler-32 is defined once from the
   prose of RFC 1950 and once from its sample code, and the two are proven
   equal.

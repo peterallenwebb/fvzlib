@@ -1646,13 +1646,30 @@ Its first two suggested improvements were carried out on 2026-11-27.
     the guarded one alone. That needs the simulation in the other
     direction. For `adler32.c` the functions without guards are verified
     directly, so it is not needed.
+- **Two more sentences of the sources are traced.** This was the
+  retrospective's third suggestion. `tools/check_trace.py` now accepts
+  the name of a result in the C proofs, and requires a note on any entry
+  that uses one, since such a result holds for one configuration. Of the
+  three sentences that were pending, two are now mapped and one remains,
+  which belongs to the stream format.
+  - **"The modulo ... can be delayed for 5552 bytes."** The C proof only
+    needed the accumulators to stay below 2^64. What the RFC means is
+    about 32 bits, so it is now proven in Layer 1, with no axiom:
+    `delay_5552` says that from reduced sums, 5552 more bytes leave both
+    sums below 2^32 and reducing then gives the same pair, and
+    `delay_5553_does_not_fit` says 5553 can be too many. The entry also
+    names the proof of zlib's loop. The second half of the sentence, that
+    the time is negligible, is not covered.
+  - **"The z_off_t type ... is a signed integer."** Mapped to the contract
+    of `adler32_combine` and its proof, for this configuration, where the
+    type is `long`.
 - **The claim was revised**, in what it rests on and not in its three
   sentences. `tools/check_claim.py` now also checks the results about
   executions it names.
-- **Open items after this.** Of the six listed at closing: item 2 is done.
-  Item 1 is still open, since the join to VST's soundness theorem is made
-  for the contracts without a cost bound and the second tick theorem is
-  unproven. Items 3 to 6 are unchanged.
+- **Open items after this.** Of the six listed at closing: items 2 and 4
+  are done. Item 1 is still open, since the join to VST's soundness
+  theorem is made for the contracts without a cost bound and the second
+  tick theorem is unproven. Items 3, 5 and 6 are unchanged.
 - **One thing learned about the tools.** VST's tactic for a call did not
   finish, in several minutes, on a call whose result went to a local
   variable named `joined64`. With the variable renamed it takes a fraction

@@ -262,9 +262,9 @@ function starts before item 7 is decided.
 
 ## Follow-up on 2026-11-27
 
-Items 1 and 2 under "Worth doing before continuing" were carried out the
-next day. The text above is left as written. This section records what
-came of them.
+Items 1, 2 and 3 under "Worth doing before continuing" were carried out
+the next day. The text above is left as written. This section records
+what came of them.
 
 - **Item 1, done for one program.** A client whose `main` calls all five
   functions is verified in VST and taken through VST's soundness theorem
@@ -277,6 +277,15 @@ came of them.
   internal combine function as shipped: the operand of its signed
   remainder is never negative. The claim for `adler32.c` no longer rests
   on an unproven obligation of ours.
+
+- **Item 3, done.** The traceability file can name results in the C
+  proofs, and two of the three pending sentences are mapped. One of them
+  was not what the item assumed. It was called "already established by
+  proofs". The proof of zlib's loop shows the reduction can be delayed for
+  5552 bytes with 64-bit accumulators. The RFC's sentence is about 32
+  bits, which is why the number is 5552, and that had not been proven
+  anywhere. It is now a Layer 1 theorem, with a second one showing that
+  5553 bytes can be too many.
 
 Item 1 was called "the piece of the method most likely to hold a
 surprise". It held five.
@@ -320,6 +329,6 @@ entry said "a few hundred lines". Both were done by the end of the next
 day. The proof of T0003 is 888 lines, not a few hundred, and our guess is
 that the one direction it leaves out would be about as much again.
 
-Still open from the list above: items 3 to 9. Item 6, the second tick
+Still open from the list above: items 4 to 9. Item 6, the second tick
 theorem, now has its premise available in the right form, since
 `never_goes_wrong` is what VST's soundness theorem is shown to give.

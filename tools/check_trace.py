@@ -7,9 +7,17 @@ For every file trace/*.toml this checks that:
   * each passage occurs exactly once in its source, between its recorded
     `before` and `after` text, and equals its sentences joined in order;
   * each sentence has the recorded SHA-256 and a known status;
-  * each name in `covered_by` is defined in the Rocq sources;
+  * each name in `covered_by` is defined in the Rocq sources.  A name may
+    be in a specification layer, `fvzlib.format.` or `fvzlib.api.`, or in
+    a directory of C proofs, `fvzlib.proofs.<directory>.`;
   * `definition`, `theorem`, and `test` entries name at least one item, and
-    `pending` and `not-covered` entries give a reason.
+    `pending` and `not-covered` entries give a reason;
+  * an entry that names an item in the C proofs has a note.  Such an item
+    holds for the configuration the proofs are about, not for every one,
+    and rests on axioms where the specification layers rest on none.  The
+    note is where the entry says what that leaves out.
+
+This reads source text only, so it runs before the proofs are built.
 
 Sources that live in the upstream zlib tree are read from the directory
 given by --upstream.  Without it those passages are skipped and reported.
@@ -45,13 +53,22 @@ def normalize(raw, strip):
     return " ".join(" ".join(kept).split())
 
 
+PROOFS = "fvzlib.proofs."
+
+
 def logical_roots():
-    """Map Rocq logical prefixes to directories, from _CoqProject."""
+    """Map Rocq logical prefixes to directories: the specification layers,
+    from _CoqProject, and each directory of C proofs, which its Makefile
+    names fvzlib.proofs.<directory>."""
     roots = {}
     for line in (ROOT / "_CoqProject").read_text().splitlines():
         parts = line.split()
         if len(parts) == 3 and parts[0] == "-Q":
             roots[parts[2]] = ROOT / parts[1]
+    for directory in sorted((ROOT / "proofs").iterdir()):
+        makefile = directory / "Makefile"
+        if makefile.exists() and PROOFS + directory.name in makefile.read_text():
+            roots[PROOFS + directory.name] = directory
     return roots
 
 
@@ -80,7 +97,7 @@ def main():
     args = ap.parse_args()
 
     roots = logical_roots()
-    errors, skipped, counts = [], [], {}
+    errors, skipped, counts, in_proofs = [], [], {}, 0
     files = sorted((ROOT / "trace").glob("*.toml"))
     if not files:
         errors.append("no files in trace/")
@@ -133,6 +150,11 @@ def main():
                     problem = resolve(name, roots)
                     if problem:
                         errors.append(f"{where}: {problem}")
+                if any(name.startswith(PROOFS) for name in items):
+                    in_proofs += 1
+                    if not s.get("note"):
+                        errors.append(f"{where}: names an item in the C "
+                                      f"proofs, so it needs a note")
 
             source = texts.get(passage["source"], "missing")
             if source == "missing":
@@ -156,6 +178,8 @@ def main():
     total = sum(counts.values())
     summary = ", ".join(f"{counts.get(s, 0)} {s}" for s in sorted(STATUSES))
     print(f"trace: {total} sentences in {len(files)} file(s): {summary}")
+    if in_proofs:
+        print(f"trace: {in_proofs} of them name an item in the C proofs")
     for item in skipped:
         print(f"trace: SKIPPED {item} (needs --upstream)")
     for e in errors:
